@@ -27,5 +27,7 @@ void main() {
     v_TexCoord  = a_Position;
     
     // your code here
-    gl_Position = vec4(0);
+    mat4 viewRot = mat4(mat3(u_View));  
+    vec4 pos = u_Projection * viewRot * vec4(a_Position, 1.0);
+    gl_Position = pos.xyww;
 }

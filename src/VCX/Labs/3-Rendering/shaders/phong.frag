@@ -38,7 +38,17 @@ uniform sampler2D u_HeightMap;
 
 vec3 Shade(vec3 lightIntensity, vec3 lightDir, vec3 normal, vec3 viewDir, vec3 diffuseColor, vec3 specularColor, float shininess) {
     // your code here:
-    return vec3(0);
+    if(u_UseBlinn) {
+        vec3 diffuse_light = diffuseColor * lightIntensity * max(0, dot(normal, lightDir));
+        vec3 h = normalize(lightDir + viewDir);
+        vec3 specular_light = specularColor * lightIntensity * pow(max(dot(normal, h), 0.0), shininess);
+        return diffuse_light + specular_light;
+    } else {
+        vec3 diffuse_light = diffuseColor * lightIntensity * max(0, dot(normal, lightDir));
+        vec3 r = reflect(-lightDir, normal);
+        vec3 specular_light = specularColor * lightIntensity * pow(max(dot(r, viewDir), 0.0), shininess);
+        return diffuse_light + specular_light;
+    }
 }
 
 vec3 GetNormal() {
@@ -47,6 +57,23 @@ vec3 GetNormal() {
 
     // your code here:
     vec3 bumpNormal = vn;
+    // from paper: Bump Mapping Unparametrized Surfaces on the GPU
+
+    vec3 posDX = dFdx(v_Position.xyz);
+    vec3 posDY = dFdy(v_Position.xyz);
+
+    vec3 r1 = cross(posDY, vn);
+    vec3 r2 = cross(vn, posDX);
+    float det = dot(posDX, r1);
+
+    // 从高度贴图取样
+    float Hll = texture(u_HeightMap, v_TexCoord).x;
+    float Hlr = texture(u_HeightMap, v_TexCoord + dFdx(v_TexCoord.xy)).x;
+    float Hul = texture(u_HeightMap, v_TexCoord + dFdy(v_TexCoord.xy)).x;
+
+    // 计算表面高度梯度
+    vec3 surf_grad = sign(det) * ((Hlr - Hll) * r1 + (Hul - Hll) * r2);
+    bumpNormal = normalize(abs(det) * vn - surf_grad);
 
     return bumpNormal != bumpNormal ? vn : normalize(vn * (1. - u_BumpMappingBlend) + bumpNormal * u_BumpMappingBlend);
 }
