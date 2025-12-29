@@ -1,47 +1,39 @@
+#pragma once
 #include "Labs/MotionMatching/CaseMotionMatching.h"
-#include "Labs/Common/ImGuiHelper.h"
 
 // 包含核心模块
 #include "Core/Animation/character.h"
-#include "Core/Input/controller.h"
-#include "Core/IO/loader.h"
-#include "Core/MotionMatching/database.h"
-#include "Core/Physics/spring.h"
-#include "Core/Rendering/mesh_processor.h"
+#include "Core/Animation/database.h"
+#include "Core/Utils/controller.h"
+#include "Core/Utils/loader.h"
 
 // 包含 VCX 框架组件
 #include "Engine/Camera.hpp"
 #include "Engine/GL/Frame.hpp"
 #include "Engine/GL/Program.h"
-#include "Engine/GL/RenderItem.h"
 #include "Labs/Common/OrbitCameraManager.h"
 
 // 包含新的渲染器
 #include "Rendering/MotionMatchingRenderer.h"
 
-#include <chrono>
-
-namespace VCX::Labs::MotionMatching {
+namespace VCX::Labs::MotionMatching::Rendering {
 
     using namespace Core::Animation;
-    using namespace Core::MotionMatching;
-    using namespace Core::Physics;
-    using namespace Core::Input;
+    using namespace Core::Utils;
     using namespace Core::Rendering;
-    using namespace Core::IO;
     using namespace Engine;
     using namespace Engine::GL;
 
     CaseMotionMatching::CaseMotionMatching():
         _program(
-            UniqueProgram({ SharedShader("assets/motion-matching/shaders/character.vert"), SharedShader("assets/motion-matching/shaders/character.frag") })),
+            UniqueProgram({ SharedShader("assets/shaders/character.vert"), SharedShader("assets/shaders/character.frag") })),
         _groundProgram(
-            UniqueProgram({ SharedShader("assets/motion-matching/shaders/checkerboard.vert"), SharedShader("assets/motion-matching/shaders/checkerboard.frag") })),
+            UniqueProgram({ SharedShader("assets/shaders/checkerboard.vert"), SharedShader("assets/shaders/checkerboard.frag") })),
         _camera({ .Eye = glm::vec3(-3, 3, 3) }),
         _renderer(std::make_unique<MotionMatchingRenderer>()) {
         // 构造函数初始化
         _character           = std::make_unique<Core::Animation::character>();
-        _database            = std::make_unique<Core::MotionMatching::database>();
+        _database            = std::make_unique<Core::Animation::database>();
         _characterController = std::make_unique<CharacterController>();
         _gamepadController   = std::make_unique<GamepadController>();
 
@@ -60,21 +52,21 @@ namespace VCX::Labs::MotionMatching {
 
         // 初始化运动匹配系统
         // 1. 加载角色数据 (character.bin)
-        std::string characterPath = "assets/motion-matching/data/character.bin";
+        std::string characterPath = "assets/data/character.bin";
         if (! load_character(*_character, characterPath.c_str())) {
             // 如果加载失败，使用默认值
             *_character = character();
         }
 
         // 2. 加载动画数据库 (database.bin)
-        std::string databasePath = "assets/motion-matching/data/database.bin";
+        std::string databasePath = "assets/data/database.bin";
         if (! load_database(*_database, databasePath.c_str())) {
             // 如果加载失败，使用默认值
             *_database = database();
         }
 
         // 3. 加载特征数据 (features.bin)
-        std::string featuresPath = "assets/motion-matching/data/features.bin";
+        std::string featuresPath = "assets/data/features.bin";
         if (! load_matching_features(*_database, featuresPath.c_str())) {
             // 如果加载失败，构建特征
             database_build_matching_features(
@@ -240,4 +232,4 @@ namespace VCX::Labs::MotionMatching {
         // 2. 更新角色控制器状态
         // 3. 更新运动匹配状态
     }
-} // namespace VCX::Labs::MotionMatching
+} // namespace VCX::Labs::MotionMatching::Rendering

@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 
-namespace VCX::Labs::MotionMatching::Core::DataStructures {
+namespace VCX::Labs::MotionMatching::Core::Math {
 
     //--------------------------------------
 
@@ -210,4 +210,4 @@ namespace VCX::Labs::MotionMatching::Core::DataStructures {
         assert((int) num == rows * cols);
     }
 
-} // namespace VCX::Labs::MotionMatching::Core::DataStructures
+} // namespace VCX::Labs::MotionMatching::Core::Math

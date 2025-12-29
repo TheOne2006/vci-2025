@@ -6,16 +6,14 @@
 #include <glm/glm.hpp>
 
 #include "Engine/Camera.hpp"
-#include "Engine/GL/Frame.hpp"
 #include "Engine/GL/Program.h"
 #include "Engine/GL/RenderItem.h"
-#include "Labs/Common/OrbitCameraManager.h"
 
 #include "../Core/Animation/character.h"
-#include "../Core/MotionMatching/database.h"
+#include "../Core/Animation/database.h"
 #include "../Core/Rendering/mesh_processor.h"
 
-namespace VCX::Labs::MotionMatching {
+namespace VCX::Labs::MotionMatching::Rendering {
 
     // 运动匹配渲染器 - 使用 VCX 框架的 GL 抽象
     class MotionMatchingRenderer {
@@ -27,8 +25,8 @@ namespace VCX::Labs::MotionMatching {
 
         // 设置角色数据
         void SetCharacterData(
-            const ::VCX::Labs::MotionMatching::Core::Animation::character &     character,
-            const ::VCX::Labs::MotionMatching::Core::MotionMatching::database & database);
+            const ::VCX::Labs::MotionMatching::Core::Animation::character & character,
+            const ::VCX::Labs::MotionMatching::Core::Animation::database &  database);
 
         // 更新动画状态
         void UpdateAnimationState(
@@ -78,8 +76,8 @@ namespace VCX::Labs::MotionMatching {
 
         // 创建角色网格
         bool CreateCharacterMesh(
-            const ::VCX::Labs::MotionMatching::Core::Animation::character &     character,
-            const ::VCX::Labs::MotionMatching::Core::MotionMatching::database & database);
+            const VCX::Labs::MotionMatching::Core::Animation::character & character,
+            const VCX::Labs::MotionMatching::Core::Animation::database &  database);
 
         // 创建地面网格
         bool CreateGroundMesh();
@@ -87,4 +85,4 @@ namespace VCX::Labs::MotionMatching {
         // 更新角色顶点缓冲区
         void UpdateCharacterVertexBuffer();
     };
-} // namespace VCX::Labs::MotionMatching
+} // namespace VCX::Labs::MotionMatching::Rendering

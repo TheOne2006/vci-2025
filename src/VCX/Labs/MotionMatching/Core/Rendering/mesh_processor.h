@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Animation/character.h"
-#include "../DataStructures/array.h"
+#include "../Math/array.h"
 #include "../Math/common.h"
 #include "../Math/quat.h"
 #include "../Math/vec.h"
@@ -12,7 +12,6 @@ namespace VCX::Labs::MotionMatching::Core::Rendering {
 
     using namespace Animation;
     using namespace Math;
-    using namespace DataStructures;
 
     // Simple CPU-based mesh for rendering
     struct SimpleMesh {

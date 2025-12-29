@@ -4,7 +4,7 @@
 #include "../Math/quat.h"
 #include "../Math/vec.h"
 
-namespace VCX::Labs::MotionMatching::Core::Physics {
+namespace VCX::Labs::MotionMatching::Core::Utils {
 
     using namespace Math;
 
@@ -197,4 +197,4 @@ namespace VCX::Labs::MotionMatching::Core::Physics {
         out_v = off_v + quat_mul_vec3(off_x, in_v);
     }
 
-} // namespace VCX::Labs::MotionMatching::Core::Physics
+} // namespace VCX::Labs::MotionMatching::Core::Utils

@@ -2,12 +2,11 @@
 
 #include "../Math/quat.h"
 #include "../Math/vec.h"
-#include "../Physics/spring.h"
+#include "spring.h"
 
-namespace VCX::Labs::MotionMatching::Core::Input {
+namespace VCX::Labs::MotionMatching::Core::Utils {
 
     using namespace Math;
-    using namespace Physics;
 
     // Simple gamepad controller simulation
     struct GamepadController {
@@ -348,4 +347,4 @@ namespace VCX::Labs::MotionMatching::Core::Input {
         }
     };
 
-} // namespace VCX::Labs::MotionMatching::Core::Input
+} // namespace VCX::Labs::MotionMatching::Core::Utils

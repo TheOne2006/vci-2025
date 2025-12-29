@@ -11,7 +11,7 @@ namespace VCX::Labs::MotionMatching {
     private:
         Common::UI _ui;
 
-        CaseMotionMatching _caseMotionMatching;
+        Rendering::CaseMotionMatching _caseMotionMatching;
 
         std::size_t _caseId = 0;
 

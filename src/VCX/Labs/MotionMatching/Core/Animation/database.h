@@ -1,19 +1,18 @@
 #pragma once
 
-#include "../Animation/character.h"
-#include "../DataStructures/array.h"
+#include "../Math/array.h"
 #include "../Math/common.h"
 #include "../Math/quat.h"
 #include "../Math/vec.h"
+#include "character.h"
 
 #include <cassert>
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
 
-namespace VCX::Labs::MotionMatching::Core::MotionMatching {
+namespace VCX::Labs::MotionMatching::Core::Animation {
 
-    using namespace DataStructures;
     using namespace Math;
 
     //--------------------------------------
@@ -662,4 +661,4 @@ namespace VCX::Labs::MotionMatching::Core::MotionMatching {
             ignore_surrounding);
     }
 
-} // namespace VCX::Labs::MotionMatching::Core::MotionMatching
+} // namespace VCX::Labs::MotionMatching::Core::Animation

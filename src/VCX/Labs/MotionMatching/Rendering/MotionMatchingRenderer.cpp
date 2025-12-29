@@ -1,11 +1,6 @@
 #include "MotionMatchingRenderer.h"
 
-#include <algorithm>
-
-#include "Engine/GL/Shader.h"
-#include "Engine/math.hpp"
-
-namespace VCX::Labs::MotionMatching {
+namespace VCX::Labs::MotionMatching::Rendering {
 
     using namespace Engine;
     using namespace Engine::GL;
@@ -52,8 +47,8 @@ namespace VCX::Labs::MotionMatching {
     }
 
     void MotionMatchingRenderer::SetCharacterData(
-        const ::VCX::Labs::MotionMatching::Core::Animation::character &     character,
-        const ::VCX::Labs::MotionMatching::Core::MotionMatching::database & database) {
+        const VCX::Labs::MotionMatching::Core::Animation::character & character,
+        const VCX::Labs::MotionMatching::Core::Animation::database &  database) {
         // 创建角色网格
         if (CreateCharacterMesh(character, database)) {
             // 更新角色顶点缓冲区
@@ -109,8 +104,8 @@ namespace VCX::Labs::MotionMatching {
     }
 
     bool MotionMatchingRenderer::CreateCharacterMesh(
-        const ::VCX::Labs::MotionMatching::Core::Animation::character &     character,
-        const ::VCX::Labs::MotionMatching::Core::MotionMatching::database & database) {
+        const ::VCX::Labs::MotionMatching::Core::Animation::character & character,
+        const ::VCX::Labs::MotionMatching::Core::Animation::database &  database) {
         // 使用 mesh_processor 创建简单网格
         _characterMesh = ::VCX::Labs::MotionMatching::Core::Rendering::create_simple_mesh(character);
 
@@ -184,4 +179,4 @@ namespace VCX::Labs::MotionMatching {
             _characterItem.UpdateVertexBuffer("normal", Engine::make_span_bytes<glm::vec3>(normals));
         }
     }
-} // namespace VCX::Labs::MotionMatching
+} // namespace VCX::Labs::MotionMatching::Rendering

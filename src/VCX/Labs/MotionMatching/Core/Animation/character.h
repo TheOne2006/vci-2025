@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../DataStructures/array.h"
+#include "../Math/array.h"
 #include "../Math/quat.h"
 #include "../Math/vec.h"
 
@@ -9,7 +9,6 @@
 
 namespace VCX::Labs::MotionMatching::Core::Animation {
 
-    using namespace DataStructures;
     using namespace Math;
 
     //--------------------------------------

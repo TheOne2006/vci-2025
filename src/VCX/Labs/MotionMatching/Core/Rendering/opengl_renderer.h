@@ -8,11 +8,7 @@
 
 #include "Engine/GL/Program.h"
 #include "Engine/GL/resource.hpp"
-#include "Engine/GL/Texture.hpp"
-#include "Engine/GL/VertexLayout.hpp"
 
-#include "../Math/quat.h"
-#include "../Math/vec.h"
 #include "mesh_processor.h"
 
 namespace VCX::Labs::MotionMatching::Core::Rendering {

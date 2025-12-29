@@ -8,7 +8,6 @@
 #include "Engine/Camera.hpp"
 #include "Engine/GL/Frame.hpp"
 #include "Engine/GL/Program.h"
-#include "Engine/GL/RenderItem.h"
 #include "Labs/Common/OrbitCameraManager.h"
 
 // 包含核心模块头文件
@@ -18,24 +17,21 @@
 // 前向声明核心模块类型
 namespace VCX::Labs::MotionMatching::Core::Animation {
     struct character;
-}
-
-namespace VCX::Labs::MotionMatching::Core::MotionMatching {
     struct database;
 }
 
-namespace VCX::Labs::MotionMatching::Core::Input {
+namespace VCX::Labs::MotionMatching::Core::Utils {
     struct GamepadController;
     struct CharacterController;
     struct KeyboardMouseController;
 }
 
 // 前向声明新的渲染器
-namespace VCX::Labs::MotionMatching {
+namespace VCX::Labs::MotionMatching::Rendering {
     class MotionMatchingRenderer;
 }
 
-namespace VCX::Labs::MotionMatching {
+namespace VCX::Labs::MotionMatching::Rendering {
 
     class CaseMotionMatching : public Common::ICase {
     public:
@@ -62,10 +58,10 @@ namespace VCX::Labs::MotionMatching {
 
         // 核心模块实例
         std::unique_ptr<Core::Animation::character>           _character;
-        std::unique_ptr<Core::MotionMatching::database>       _database;
-        std::unique_ptr<Core::Input::CharacterController>     _characterController;
-        std::unique_ptr<Core::Input::GamepadController>       _gamepadController;
-        std::unique_ptr<Core::Input::KeyboardMouseController> _keyboardMouseController;
+        std::unique_ptr<Core::Animation::database>            _database;
+        std::unique_ptr<Core::Utils::CharacterController>     _characterController;
+        std::unique_ptr<Core::Utils::GamepadController>       _gamepadController;
+        std::unique_ptr<Core::Utils::KeyboardMouseController> _keyboardMouseController;
 
         // 运动匹配状态机
         struct MotionMatchingState {
@@ -138,4 +134,4 @@ namespace VCX::Labs::MotionMatching {
         // 初始化标志
         void InitializeIfNeeded();
     };
-} // namespace VCX::Labs::MotionMatching
+} // namespace VCX::Labs::MotionMatching::Rendering

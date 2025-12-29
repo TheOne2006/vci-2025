@@ -1,8 +1,6 @@
 #include "opengl_renderer.h"
 
-#include <fstream>
 #include <iostream>
-#include <sstream>
 
 #include "Engine/GL/Shader.h"
 
@@ -90,11 +88,11 @@ namespace VCX::Labs::MotionMatching::Core::Rendering {
     bool OpenGLCharacterRenderer::initShaders() {
         try {
             // 加载顶点着色器
-            std::filesystem::path vertPath = "assets/motion-matching/shaders/character.vert";
+            std::filesystem::path vertPath = "assets/shaders/character.vert";
             SharedShader          vertShader(ShaderType::Vertex, vertPath);
 
             // 加载片段着色器
-            std::filesystem::path fragPath = "assets/motion-matching/shaders/character.frag";
+            std::filesystem::path fragPath = "assets/shaders/character.frag";
             SharedShader          fragShader(ShaderType::Fragment, fragPath);
 
             // 创建着色器程序

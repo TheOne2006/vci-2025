@@ -30,41 +30,4 @@ namespace VCX::Assets {
             "assets/models/sphere.obj",
         })
     };
-
-    enum class ExampleModel {
-        Arma,
-        Block,
-        Cube,
-        Dinosaur,
-        Face,
-        Fandisk,
-        Rocker,
-        Sphere,
-    };
-
-    inline constexpr auto ExampleScenes {
-        std::to_array<std::string_view>({
-            "assets/scenes/floor/floor.yaml",
-            "assets/scenes/cornell_box/cornell_box.yaml",
-            "assets/scenes/teapot/teapot.yaml",
-            "assets/scenes/bunny/bunny.yaml",
-            "assets/scenes/sponza/sponza.yaml",
-            "assets/scenes/breakfast_room/breakfast_room.yaml",
-            "assets/scenes/white_oak/white_oak.yaml",
-            "assets/scenes/sports_car/sports_car.yaml",
-            "assets/scenes/sibenik/sibenik.yaml",
-        })
-    };
-
-    enum class ExampleScene {
-        Floor,
-        CornellBox,
-        Teapot,
-        Bunny,
-        Sponza,
-        BreakfastRoom,
-        WhiteOak,
-        SportsCar,
-        Sibenik,
-    };
 }

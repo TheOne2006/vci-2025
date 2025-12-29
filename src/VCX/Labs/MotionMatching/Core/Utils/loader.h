@@ -1,15 +1,14 @@
 #pragma once
 
 #include "../Animation/character.h"
-#include "../DataStructures/array.h"
-#include "../MotionMatching/database.h"
+#include "../Animation/database.h"
+#include "../Math/array.h"
 
 #include <cassert>
 #include <cstdio>
 
-namespace VCX::Labs::MotionMatching::Core::IO {
+namespace VCX::Labs::MotionMatching::Core::Utils {
 
-    using namespace DataStructures;
     using namespace Animation;
     using namespace MotionMatching;
 
@@ -87,4 +86,4 @@ namespace VCX::Labs::MotionMatching::Core::IO {
         return true;
     }
 
-} // namespace VCX::Labs::MotionMatching::Core::IO
+} // namespace VCX::Labs::MotionMatching::Core::Utils
