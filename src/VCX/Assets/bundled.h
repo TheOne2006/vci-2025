@@ -17,17 +17,4 @@ namespace VCX::Assets {
             "assets/fonts/UbuntuMono.ttf",
         })
     };
-
-    inline constexpr auto ExampleModels {
-        std::to_array<std::string_view>({
-            "assets/models/arma.obj",
-            "assets/models/block.obj",
-            "assets/models/cube.obj",
-            "assets/models/dinosaur.obj",
-            "assets/models/face.obj",
-            "assets/models/fandisk.obj",
-            "assets/models/rocker.obj",
-            "assets/models/sphere.obj",
-        })
-    };
 }

@@ -1,14 +1,12 @@
 #pragma once
 
 #include <initializer_list>
-#include <unordered_map>
 
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Engine/GL/resource.hpp"
 #include "Engine/GL/Shader.h"
 #include "Engine/GL/uniform.hpp"
-#include "Engine/prelude.hpp"
 
 namespace VCX::Engine::GL {
     struct ProgramTrait {
