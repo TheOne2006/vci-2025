@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+// Some math operation
 namespace VCX::Labs::MotionMatching::Core::Math {
 
     constexpr float PIf  = 3.14159265358979323846f;

@@ -4,18 +4,20 @@
 
 #include "Engine/app.h"
 #include "Labs/Common/UI.h"
-#include "Labs/MotionMatching/CaseMotionMatching.h"
+#include "Labs/MotionMatching/CaseBVH.h"
 
 namespace VCX::Labs::MotionMatching {
-    class App : public Engine::IApp {
+    class App : public VCX::Engine::IApp {
     private:
         Common::UI _ui;
 
-        Rendering::CaseMotionMatching _caseMotionMatching;
+        CaseBVH _caseBVH;
 
         std::size_t _caseId = 0;
 
-        std::vector<std::reference_wrapper<Common::ICase>> _cases = { _caseMotionMatching };
+        std::vector<std::reference_wrapper<Common::ICase>> _cases = {
+            _caseBVH,
+        };
 
     public:
         App();

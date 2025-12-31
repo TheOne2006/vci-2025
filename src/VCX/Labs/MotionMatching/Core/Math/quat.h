@@ -4,8 +4,8 @@
 #include "vec.h"
 #include <cmath>
 
+// A basic quat operation support
 namespace VCX::Labs::MotionMatching::Core::Math {
-
     struct quat {
         quat(): w(1.0f), x(0.0f), y(0.0f), z(0.0f) {}
         quat(float _w, float _x, float _y, float _z): w(_w), x(_x), y(_y), z(_z) {}

@@ -39,14 +39,12 @@ namespace VCX::Labs::Common {
         // Set to false to disable panning
         float PanSpeed = 1.f;
 
-
-        void Save(Engine::Camera const & camera);
-        void Reset(Engine::Camera & camera);
+        void         Save(Engine::Camera const & camera);
+        void         Reset(Engine::Camera & camera);
         virtual void Update(Engine::Camera & camera) override;
-        void ProcessInput(Engine::Camera & camera, ImVec2 const & mousePos);
-    
-    private:
+        void         ProcessInput(Engine::Camera & camera, ImVec2 const & mousePos);
 
+    private:
         enum StateBits {
             StateNone   = 0,
             StateRotate = 1 << 0,
@@ -63,4 +61,4 @@ namespace VCX::Labs::Common {
         int               _state     = StateNone;
         Engine::Spherical _spDelta;
     };
-}
+} // namespace VCX::Labs::Common

@@ -17,4 +17,45 @@ namespace VCX::Assets {
             "assets/fonts/UbuntuMono.ttf",
         })
     };
+
+    inline constexpr auto BVHFiles {
+        std::to_array<std::string_view>({
+            "assets/bvh/turn_right.bvh",
+            "assets/bvh/walk_forward_resampled.bvh",
+            "assets/bvh/turn_left.bvh",
+            "assets/bvh/spin_counter_clockwise.bvh",
+            "assets/bvh/walk.bvh",
+            "assets/bvh/spin_clockwise.bvh",
+            "assets/bvh/run_forward_resampled.bvh",
+        })
+    };
+
+    enum class ExampleBVH {
+        TurnRight,
+        WalkForwardResampled,
+        TurnLeft,
+        SpinCounterClockwise,
+        Walk,
+        SpinClockwise,
+        RunForwardResampled,
+    };
+
+    inline constexpr auto DatabasePath {
+        std::to_array<std::string_view>({
+            "assets/data/database.bin",
+        })
+    };
+
+    inline constexpr auto FeaturePath {
+        std::to_array<std::string_view>({
+            "assets/data/features.bin",
+        })
+    };
+
+    inline constexpr auto CharacterPath {
+        std::to_array<std::string_view>({
+            "assets/data/character.bin",
+        })
+    };
+
 }

@@ -5,16 +5,10 @@
 #include <cstdlib>
 #include <cstring>
 
+// A basic file IO toolkit
 namespace VCX::Labs::MotionMatching::Core::Math {
-
     //--------------------------------------
-
-    // Basic type representing a pointer to some
-    // data and the size of the data. `__restrict__`
-    // here is used to indicate the data should not
-    // alias against any other input parameters and
-    // can sometimes produce important performance
-    // gains.
+    // Some basic array type, which is a light wrapper for view
     template<typename T>
     struct slice1d {
         int size;
@@ -57,10 +51,7 @@ namespace VCX::Labs::MotionMatching::Core::Math {
     };
 
     //--------------------------------------
-
-    // These types are used for the storage of arrays of data.
-    // They implicitly cast to slices so can be given directly
-    // as inputs to functions requiring them.
+    // These types are used for the storage of arrays of data, which can be implicitly transfer to slice
     template<typename T>
     struct array1d {
         int size;

@@ -1,56 +1,8 @@
-#pragma once
-
-#include "../Math/array.h"
-#include "../Math/common.h"
-#include "../Math/quat.h"
-#include "../Math/vec.h"
-#include "character.h"
-
-#include <cassert>
-#include <cfloat>
-#include <cmath>
-#include <cstdio>
+#include "database.hpp"
 
 namespace VCX::Labs::MotionMatching::Core::Animation {
 
-    using namespace Math;
-
-    //--------------------------------------
-
-    enum {
-        BOUND_SM_SIZE = 16,
-        BOUND_LR_SIZE = 64,
-    };
-
-    struct database {
-        array2d<vec3> bone_positions;
-        array2d<vec3> bone_velocities;
-        array2d<quat> bone_rotations;
-        array2d<vec3> bone_angular_velocities;
-        array1d<int>  bone_parents;
-
-        array1d<int> range_starts;
-        array1d<int> range_stops;
-
-        array2d<float> features;
-        array1d<float> features_offset;
-        array1d<float> features_scale;
-
-        array2d<bool> contact_states;
-
-        array2d<float> bound_sm_min;
-        array2d<float> bound_sm_max;
-        array2d<float> bound_lr_min;
-        array2d<float> bound_lr_max;
-
-        int nframes() const { return bone_positions.rows; }
-        int nbones() const { return bone_positions.cols; }
-        int nranges() const { return range_starts.size; }
-        int nfeatures() const { return features.cols; }
-        int ncontacts() const { return contact_states.cols; }
-    };
-
-    inline void database_load(database & db, const char * filename) {
+    void database_load(database & db, const char * filename) {
         FILE * f = std::fopen(filename, "rb");
         assert(f != nullptr);
 
@@ -68,7 +20,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
         std::fclose(f);
     }
 
-    inline void database_save_matching_features(const database & db, const char * filename) {
+    void database_save_matching_features(const database & db, const char * filename) {
         FILE * f = std::fopen(filename, "wb");
         assert(f != nullptr);
 
@@ -82,7 +34,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
     // When we add an offset to a frame in the database there is a chance
     // it will go out of the relevant range so here we can clamp it to
     // the last frame of that range.
-    inline int database_trajectory_index_clamp(database & db, int frame, int offset) {
+    int database_trajectory_index_clamp(database & db, int frame, int offset) {
         for (int i = 0; i < db.nranges(); i++) {
             if (frame >= db.range_starts(i) && frame < db.range_stops(i)) {
                 return clamp(frame + offset, db.range_starts(i), db.range_stops(i) - 1);
@@ -95,13 +47,13 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
 
     //--------------------------------------
 
-    inline void normalize_feature(
+    void normalize_feature(
         slice2d<float> features,
         slice1d<float> features_offset,
         slice1d<float> features_scale,
         const int      offset,
         const int      size,
-        const float    weight = 1.0f) {
+        const float    weight) {
         // First compute what is essentially the mean
         // value for each feature dimension
         for (int j = 0; j < size; j++) {
@@ -148,7 +100,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
         }
     }
 
-    inline void denormalize_features(
+    void denormalize_features(
         slice1d<float>       features,
         const slice1d<float> features_offset,
         const slice1d<float> features_scale) {
@@ -159,190 +111,8 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
 
     //--------------------------------------
 
-    // Here I am using a simple recursive version of forward kinematics
-    inline void forward_kinematics(
-        vec3 &              bone_position,
-        quat &              bone_rotation,
-        const slice1d<vec3> bone_positions,
-        const slice1d<quat> bone_rotations,
-        const slice1d<int>  bone_parents,
-        const int           bone) {
-        if (bone_parents(bone) != -1) {
-            vec3 parent_position;
-            quat parent_rotation;
-
-            forward_kinematics(
-                parent_position,
-                parent_rotation,
-                bone_positions,
-                bone_rotations,
-                bone_parents,
-                bone_parents(bone));
-
-            bone_position = quat_mul_vec3(parent_rotation, bone_positions(bone)) + parent_position;
-            bone_rotation = quat_mul(parent_rotation, bone_rotations(bone));
-        } else {
-            bone_position = bone_positions(bone);
-            bone_rotation = bone_rotations(bone);
-        }
-    }
-
-    // Forward kinematics but also compute the velocities
-    inline void forward_kinematics_velocity(
-        vec3 &              bone_position,
-        vec3 &              bone_velocity,
-        quat &              bone_rotation,
-        vec3 &              bone_angular_velocity,
-        const slice1d<vec3> bone_positions,
-        const slice1d<vec3> bone_velocities,
-        const slice1d<quat> bone_rotations,
-        const slice1d<vec3> bone_angular_velocities,
-        const slice1d<int>  bone_parents,
-        const int           bone) {
-        //
-        if (bone_parents(bone) != -1) {
-            vec3 parent_position;
-            vec3 parent_velocity;
-            quat parent_rotation;
-            vec3 parent_angular_velocity;
-
-            forward_kinematics_velocity(
-                parent_position,
-                parent_velocity,
-                parent_rotation,
-                parent_angular_velocity,
-                bone_positions,
-                bone_velocities,
-                bone_rotations,
-                bone_angular_velocities,
-                bone_parents,
-                bone_parents(bone));
-
-            bone_position = quat_mul_vec3(parent_rotation, bone_positions(bone)) + parent_position;
-            bone_velocity =
-                parent_velocity + quat_mul_vec3(parent_rotation, bone_velocities(bone)) + cross(parent_angular_velocity, quat_mul_vec3(parent_rotation, bone_positions(bone)));
-            bone_rotation         = quat_mul(parent_rotation, bone_rotations(bone));
-            bone_angular_velocity = quat_mul_vec3(parent_rotation, bone_angular_velocities(bone)) + parent_angular_velocity;
-        } else {
-            bone_position         = bone_positions(bone);
-            bone_velocity         = bone_velocities(bone);
-            bone_rotation         = bone_rotations(bone);
-            bone_angular_velocity = bone_angular_velocities(bone);
-        }
-    }
-
-    // Compute forward kinematics for all joints
-    inline void forward_kinematics_full(
-        slice1d<vec3>       global_bone_positions,
-        slice1d<quat>       global_bone_rotations,
-        const slice1d<vec3> local_bone_positions,
-        const slice1d<quat> local_bone_rotations,
-        const slice1d<int>  bone_parents) {
-        for (int i = 0; i < bone_parents.size; i++) {
-            // Assumes bones are always sorted from root onwards
-            assert(bone_parents(i) < i);
-
-            if (bone_parents(i) == -1) {
-                global_bone_positions(i) = local_bone_positions(i);
-                global_bone_rotations(i) = local_bone_rotations(i);
-            } else {
-                vec3 parent_position     = global_bone_positions(bone_parents(i));
-                quat parent_rotation     = global_bone_rotations(bone_parents(i));
-                global_bone_positions(i) = quat_mul_vec3(parent_rotation, local_bone_positions(i)) + parent_position;
-                global_bone_rotations(i) = quat_mul(parent_rotation, local_bone_rotations(i));
-            }
-        }
-    }
-
-    // Compute forward kinematics of just some joints using a
-    // mask to indicate which joints are already computed
-    inline void forward_kinematics_partial(
-        slice1d<vec3>       global_bone_positions,
-        slice1d<quat>       global_bone_rotations,
-        slice1d<bool>       global_bone_computed,
-        const slice1d<vec3> local_bone_positions,
-        const slice1d<quat> local_bone_rotations,
-        const slice1d<int>  bone_parents,
-        int                 bone) {
-        if (bone_parents(bone) == -1) {
-            global_bone_positions(bone) = local_bone_positions(bone);
-            global_bone_rotations(bone) = local_bone_rotations(bone);
-            global_bone_computed(bone)  = true;
-            return;
-        }
-
-        if (! global_bone_computed(bone_parents(bone))) {
-            forward_kinematics_partial(
-                global_bone_positions,
-                global_bone_rotations,
-                global_bone_computed,
-                local_bone_positions,
-                local_bone_rotations,
-                bone_parents,
-                bone_parents(bone));
-        }
-
-        vec3 parent_position        = global_bone_positions(bone_parents(bone));
-        quat parent_rotation        = global_bone_rotations(bone_parents(bone));
-        global_bone_positions(bone) = quat_mul_vec3(parent_rotation, local_bone_positions(bone)) + parent_position;
-        global_bone_rotations(bone) = quat_mul(parent_rotation, local_bone_rotations(bone));
-        global_bone_computed(bone)  = true;
-    }
-
-    // Same but including velocity
-    inline void forward_kinematics_velocity_partial(
-        slice1d<vec3>       global_bone_positions,
-        slice1d<vec3>       global_bone_velocities,
-        slice1d<quat>       global_bone_rotations,
-        slice1d<vec3>       global_bone_angular_velocities,
-        slice1d<bool>       global_bone_computed,
-        const slice1d<vec3> local_bone_positions,
-        const slice1d<vec3> local_bone_velocities,
-        const slice1d<quat> local_bone_rotations,
-        const slice1d<vec3> local_bone_angular_velocities,
-        const slice1d<int>  bone_parents,
-        int                 bone) {
-        if (bone_parents(bone) == -1) {
-            global_bone_positions(bone)          = local_bone_positions(bone);
-            global_bone_velocities(bone)         = local_bone_velocities(bone);
-            global_bone_rotations(bone)          = local_bone_rotations(bone);
-            global_bone_angular_velocities(bone) = local_bone_angular_velocities(bone);
-            global_bone_computed(bone)           = true;
-            return;
-        }
-
-        if (! global_bone_computed(bone_parents(bone))) {
-            forward_kinematics_velocity_partial(
-                global_bone_positions,
-                global_bone_velocities,
-                global_bone_rotations,
-                global_bone_angular_velocities,
-                global_bone_computed,
-                local_bone_positions,
-                local_bone_velocities,
-                local_bone_rotations,
-                local_bone_angular_velocities,
-                bone_parents,
-                bone_parents(bone));
-        }
-
-        vec3 parent_position         = global_bone_positions(bone_parents(bone));
-        vec3 parent_velocity         = global_bone_velocities(bone_parents(bone));
-        quat parent_rotation         = global_bone_rotations(bone_parents(bone));
-        vec3 parent_angular_velocity = global_bone_angular_velocities(bone_parents(bone));
-
-        global_bone_positions(bone) = quat_mul_vec3(parent_rotation, local_bone_positions(bone)) + parent_position;
-        global_bone_velocities(bone) =
-            parent_velocity + quat_mul_vec3(parent_rotation, local_bone_velocities(bone)) + cross(parent_angular_velocity, quat_mul_vec3(parent_rotation, local_bone_positions(bone)));
-        global_bone_rotations(bone)          = quat_mul(parent_rotation, local_bone_rotations(bone));
-        global_bone_angular_velocities(bone) = quat_mul_vec3(parent_rotation, local_bone_angular_velocities(bone)) + parent_angular_velocity;
-        global_bone_computed(bone)           = true;
-    }
-
-    //--------------------------------------
-
     // Compute a feature for the position of a bone relative to the simulation/root bone
-    inline void compute_bone_position_feature(database & db, int & offset, int bone, float weight = 1.0f) {
+    void compute_bone_position_feature(database & db, int & offset, int bone, float weight) {
         for (int i = 0; i < db.nframes(); i++) {
             vec3 bone_position;
             quat bone_rotation;
@@ -368,7 +138,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
     }
 
     // Similar but for a bone's velocity
-    inline void compute_bone_velocity_feature(database & db, int & offset, int bone, float weight = 1.0f) {
+    void compute_bone_velocity_feature(database & db, int & offset, int bone, float weight) {
         for (int i = 0; i < db.nframes(); i++) {
             vec3 bone_position;
             vec3 bone_velocity;
@@ -400,7 +170,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
     }
 
     // Compute the trajectory at 20, 40, and 60 frames in the future
-    inline void compute_trajectory_position_feature(database & db, int & offset, float weight = 1.0f) {
+    void compute_trajectory_position_feature(database & db, int & offset, float weight) {
         for (int i = 0; i < db.nframes(); i++) {
             int t0 = database_trajectory_index_clamp(db, i, 20);
             int t1 = database_trajectory_index_clamp(db, i, 40);
@@ -424,7 +194,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
     }
 
     // Same for direction
-    inline void compute_trajectory_direction_feature(database & db, int & offset, float weight = 1.0f) {
+    void compute_trajectory_direction_feature(database & db, int & offset, float weight) {
         for (int i = 0; i < db.nframes(); i++) {
             int t0 = database_trajectory_index_clamp(db, i, 20);
             int t1 = database_trajectory_index_clamp(db, i, 40);
@@ -450,7 +220,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
     // Build the Motion Matching search acceleration structure. Here we
     // just use axis aligned bounding boxes regularly spaced at BOUND_SM_SIZE
     // and BOUND_LR_SIZE frames
-    inline void database_build_bounds(database & db) {
+    void database_build_bounds(database & db) {
         int nbound_sm = ((db.nframes() + BOUND_SM_SIZE - 1) / BOUND_SM_SIZE);
         int nbound_lr = ((db.nframes() + BOUND_LR_SIZE - 1) / BOUND_LR_SIZE);
 
@@ -478,7 +248,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
     }
 
     // Build all motion matching features and acceleration structure
-    inline void database_build_matching_features(
+    void database_build_matching_features(
         database &  db,
         const float feature_weight_foot_position,
         const float feature_weight_foot_velocity,
@@ -517,7 +287,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
     // against the query feature vector, first checking the
     // query distance to the axis aligned bounding boxes used
     // for the acceleration structure.
-    inline void motion_matching_search(
+    void motion_matching_search(
         int & __restrict__ best_index,
         float & __restrict__ best_cost,
         const slice1d<int>   range_starts,
@@ -628,14 +398,14 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
     }
 
     // Search database
-    inline void database_search(
+    void database_search(
         int &                best_index,
         float &              best_cost,
         const database &     db,
         const slice1d<float> query,
-        const float          transition_cost    = 0.0f,
-        const int            ignore_range_end   = 20,
-        const int            ignore_surrounding = 20) {
+        const float          transition_cost,
+        const int            ignore_range_end,
+        const int            ignore_surrounding) {
         // Normalize Query
         array1d<float> query_normalized(db.nfeatures());
         for (int i = 0; i < db.nfeatures(); i++) {
