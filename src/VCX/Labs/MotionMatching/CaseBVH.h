@@ -30,11 +30,14 @@ namespace VCX::Labs::MotionMatching {
 
     private:
         Engine::GL::UniqueProgram     _program;
+        Engine::GL::UniqueProgram     _programGround;
+        Engine::GL::UniqueProgram     _programFlat;
         Engine::GL::UniqueRenderFrame _frame;
         Engine::Camera                _camera { .Eye = glm::vec3(-3, 3, 3) };
         Common::OrbitCameraManager    _cameraManager;
         bool                          _stopped { false };
         bool                          _enableMSAA { true };
+        bool                          _showAxis { true };
 
         // Instanced Rendering Resources
         Engine::GL::UniqueVertexArray        _vao;
@@ -43,6 +46,15 @@ namespace VCX::Labs::MotionMatching {
         Engine::GL::UniqueArrayBuffer        _vboInstance;
         std::vector<glm::mat4>               _instances;
         std::size_t                          _indexCount { 0 };
+
+        // Ground
+        Engine::GL::UniqueVertexArray _vaoGround;
+        Engine::GL::UniqueArrayBuffer _vboGround;
+
+        // Axis & Dot
+        Engine::GL::UniqueVertexArray _vaoAxis;
+        Engine::GL::UniqueArrayBuffer _vboAxis;
+        std::size_t                   _axisVertexCount { 0 };
 
         // BVH Data
         std::unique_ptr<bvh11::BvhObject>                _bvh;
