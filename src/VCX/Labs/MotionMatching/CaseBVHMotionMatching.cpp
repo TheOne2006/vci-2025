@@ -2,6 +2,9 @@
 #include "Assets/bundled.h"
 #include "Labs/MotionMatching/Core/Animation/bone_operations.hpp"
 #include "Labs/MotionMatching/Core/Animation/character.hpp"
+#include "Labs/MotionMatching/Core/Animation/controller.hpp"
+#include "Labs/MotionMatching/Core/Animation/database.hpp"
+#include "Labs/MotionMatching/Core/Animation/update.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
@@ -15,6 +18,65 @@ namespace VCX::Labs::MotionMatching {
 
         // Load Character
         Core::Animation::character_load(_character, VCX::Assets::CharacterPath[0].data());
+
+        // Load Database
+        Core::Animation::database_load(_database, "assets/data/database.bin");
+
+        float feature_weight_foot_position         = 0.75f;
+        float feature_weight_foot_velocity         = 1.0f;
+        float feature_weight_hip_velocity          = 1.0f;
+        float feature_weight_trajectory_positions  = 1.0f;
+        float feature_weight_trajectory_directions = 1.5f;
+
+        database_build_matching_features(
+            _database,
+            feature_weight_foot_position,
+            feature_weight_foot_velocity,
+            feature_weight_hip_velocity,
+            feature_weight_trajectory_positions,
+            feature_weight_trajectory_directions);
+
+        // Resize Arrays
+        int nbones = _database.nbones();
+        _bone_positions.resize(nbones);
+        _bone_velocities.resize(nbones);
+        _bone_rotations.resize(nbones);
+        _bone_angular_velocities.resize(nbones);
+
+        _bone_offset_positions.resize(nbones);
+        _bone_offset_velocities.resize(nbones);
+        _bone_offset_rotations.resize(nbones);
+        _bone_offset_angular_velocities.resize(nbones);
+
+        _global_bone_positions.resize(nbones);
+        _global_bone_rotations.resize(nbones);
+
+        int ncontacts = _database.ncontacts();
+        _contact_states.resize(ncontacts);
+        _contact_locks.resize(ncontacts);
+        _contact_positions.resize(ncontacts);
+        _contact_velocities.resize(ncontacts);
+        _contact_points.resize(ncontacts);
+        _contact_targets.resize(ncontacts);
+        _contact_offset_positions.resize(ncontacts);
+        _contact_offset_velocities.resize(ncontacts);
+
+        // Initialize State
+        _current_frame_index = _database.range_starts(0);
+        _current_frame_time  = 0.0f;
+
+        // Initialize Offsets
+        _bone_offset_positions.zero();
+        _bone_offset_velocities.zero();
+        for (int i = 0; i < nbones; ++i) _bone_offset_rotations(i) = Core::Math::quat(1, 0, 0, 0);
+        _bone_offset_angular_velocities.zero();
+
+        _transition_src_position = Core::Math::vec3(0, 0, 0);
+        _transition_src_rotation = Core::Math::quat(1, 0, 0, 0);
+        _transition_dst_position = Core::Math::vec3(0, 0, 0);
+        _transition_dst_rotation = Core::Math::quat(1, 0, 0, 0);
+
+        _boneParents = _database.bone_parents;
 
         // Store Rest Pose
         _restPositions = _character.positions;
@@ -71,198 +133,124 @@ namespace VCX::Labs::MotionMatching {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
-    void CaseBVHMotionMatching::OnBVHLoaded() {
-        _joints = _bvh->GetJointList();
+    void CaseBVHMotionMatching::UpdateController(float dt) {
+        using namespace Core::Math;
+        using namespace Core::Animation;
 
-        int numJoints = _joints.size();
-        _boneParents.resize(numJoints);
-        _localPositions.resize(numJoints);
-        _localRotations.resize(numJoints);
-        _globalPositions.resize(numJoints);
-        _globalRotations.resize(numJoints);
-
-        // Resize skinning arrays to match character bones (23)
-        int numSkinningBones = 23;
-        _skinningPositions.resize(numSkinningBones);
-        _skinningRotations.resize(numSkinningBones);
-
-        for (int i = 0; i < numJoints; ++i) {
-            auto parent = _joints[i]->parent();
-            if (parent) {
-                // Find parent index
-                int parentIndex = -1;
-                for (int j = 0; j < numJoints; ++j) {
-                    if (_joints[j] == parent) {
-                        parentIndex = j;
-                        break;
-                    }
-                }
-                _boneParents(i) = parentIndex;
-            } else {
-                _boneParents(i) = -1;
-            }
+        // Input
+        float x = 0.0f;
+        float y = 0.0f;
+        if (_controlCharacter) {
+            if (ImGui::IsKeyDown(ImGuiKey_W)) y += 1.0f;
+            if (ImGui::IsKeyDown(ImGuiKey_S)) y -= 1.0f;
+            if (ImGui::IsKeyDown(ImGuiKey_A)) x += 1.0f; // Left
+            if (ImGui::IsKeyDown(ImGuiKey_D)) x -= 1.0f; // Right
         }
 
-        _currentTime = 0.0f;
-        _frameIndex  = 0;
-    }
+        bool desiredStrafe = ImGui::IsKeyDown(ImGuiKey_O);
 
-    void CaseBVHMotionMatching::UpdateFrame(float dt) {
-        if (! _bvh) return;
+        vec3 stickLeft  = gamepad_get_stick(x, y);
+        vec3 stickRight = vec3(0, 0, 0); // Right stick not implemented for keyboard yet
 
-        _currentTime += dt;
-        float totalDuration = _bvh->frames() * _bvh->frame_time();
-        if (_currentTime > totalDuration) {
-            _currentTime = std::fmod(_currentTime, totalDuration);
+        // Get camera azimuth
+        // Camera direction is Target - Eye
+        glm::vec3 camDir        = glm::normalize(_camera.Target - _camera.Eye);
+        float     cameraAzimuth = std::atan2(camDir.x, camDir.z);
+
+        // Compute desired velocity for visualization
+        const float fwrd_speed = 4.0f;
+        const float side_speed = 3.0f;
+        const float back_speed = 2.5f;
+        _desiredVelocity       = desired_velocity_update(
+            stickLeft,
+            cameraAzimuth,
+            _rotation,
+            fwrd_speed,
+            side_speed,
+            back_speed);
+
+        // Prepare Trajectory Buffers
+        int               predictionSteps = 4;
+        std::vector<vec3> trajPos(predictionSteps), trajVel(predictionSteps), trajAcc(predictionSteps);
+        std::vector<quat> trajRot(predictionSteps);
+        std::vector<vec3> trajAngVel(predictionSteps);
+
+        MotionMatchingUpdate(
+            _position, _velocity, _acceleration, _rotation, _angularVelocity, _character_position, _character_rotation, _character_velocity, _character_angular_velocity, slice1d<vec3>(predictionSteps, trajPos.data()), slice1d<vec3>(predictionSteps, trajVel.data()), slice1d<vec3>(predictionSteps, trajAcc.data()), slice1d<quat>(predictionSteps, trajRot.data()), slice1d<vec3>(predictionSteps, trajAngVel.data()), _current_frame_index, _current_frame_time, _search_timer, _bone_offset_positions, _bone_offset_velocities, _bone_offset_rotations, _bone_offset_angular_velocities, _transition_src_position, _transition_src_rotation, _transition_dst_position, _transition_dst_rotation, _global_bone_positions, _global_bone_rotations, _contact_states, _contact_locks, _contact_positions, _contact_velocities, _contact_points, _contact_targets, _contact_offset_positions, _contact_offset_velocities, _database, _character, stickLeft, stickRight, cameraAzimuth, desiredStrafe, dt, _enableIK // enable_ik
+        );
+
+        // Update Predicted Positions for Rendering
+        _predictedPositions.resize(predictionSteps);
+        _predictedRotations.resize(predictionSteps);
+        for (int i = 0; i < predictionSteps; ++i) {
+            _predictedPositions[i] = glm::vec3(trajPos[i].x, trajPos[i].y, trajPos[i].z);
+            _predictedRotations[i] = glm::quat(trajRot[i].w, trajRot[i].x, trajRot[i].y, trajRot[i].z);
         }
 
-        _frameIndex = static_cast<int>(_currentTime / _bvh->frame_time());
-        _frameIndex = std::clamp(_frameIndex, 0, _bvh->frames() - 1);
-
-        // 1. Sample BVH
-        for (int i = 0; i < _joints.size(); ++i) {
-            auto               transform = _bvh->GetTransformationRelativeToParent(_joints[i], _frameIndex);
-            Eigen::Vector3d    pos       = transform.translation();
-            Eigen::Quaterniond rot(transform.rotation());
-
-            _localPositions(i) = Core::Math::vec3(pos.x(), pos.y(), pos.z()) * 0.01f;
-            _localRotations(i) = Core::Math::quat(rot.w(), rot.x(), rot.y(), rot.z());
-        }
-
-        // 2. FK for BVH
-        Core::Animation::forward_kinematics_full(
-            _globalPositions,
-            _globalRotations,
-            _localPositions,
-            _localRotations,
-            _boneParents);
-
-        // 3. Retargeting / Injection
-        // Map BVH joints to Skinning Bones
-        // Assumption: BVH Root (0) is Hips (1)
-        // BVH joints 0..21 map to Skinning Bones 1..22
-
-        for (int i = 0; i < _joints.size(); ++i) {
-            if (i + 1 < _skinningPositions.size) {
-                _skinningPositions(i + 1) = _globalPositions(i);
-                _skinningRotations(i + 1) = _globalRotations(i);
-            }
-        }
-
-        // Calculate Simulation Bone (Index 0)
-        // Needs Spine2 (Index 12 in Skinning, so Index 11 in BVH) and Hips (Index 1 in Skinning, Index 0 in BVH)
-        if (_joints.size() > 11) {
-            using namespace Core::Math;
-
-            vec3 spine2Pos = _globalPositions(11); // Spine2
-            vec3 hipsPos   = _globalPositions(0);  // Hips
-            quat hipsRot   = _globalRotations(0);  // Hips
-
-            // Sim Position: Project Spine2 to ground
-            vec3 simPos = spine2Pos;
-            simPos.y    = 0.0f; // Assuming Y is up
-
-            // Sim Rotation: Project Hips forward to ground
-            vec3 localForward(0, 1, 0); // Y is forward in bone local space
-            vec3 worldForward = quat_mul_vec3(hipsRot, localForward);
-
-            worldForward.y = 0.0f; // Project to XZ
-            worldForward   = normalize(worldForward);
-
-            // Compute rotation from Z axis [0,0,1] to worldForward
-            vec3 targetZ = worldForward;
-            vec3 sourceZ(0, 0, 1);
-
-            quat simRot = quat_between(sourceZ, targetZ);
-
-            _skinningPositions(0) = simPos;
-            _skinningRotations(0) = simRot;
-        } else {
-            // Fallback
-            _skinningPositions(0)   = _globalPositions(0);
-            _skinningPositions(0).y = 0;
-            _skinningRotations(0)   = _globalRotations(0);
-        }
-
-        // 4. Skinning
-        Core::Animation::linear_blend_skinning_positions(
-            _character.positions,
-            _restPositions,
+        // Deform Mesh
+        linear_blend_skinning_positions(
+            slice1d<vec3>(_character.positions.size, _character.positions.data),
+            slice1d<vec3>(_restPositions.size, _restPositions.data),
             _character.bone_weights,
             _character.bone_indices,
             _character.bone_rest_positions,
             _character.bone_rest_rotations,
-            _skinningPositions,
-            _skinningRotations);
+            _global_bone_positions,
+            _global_bone_rotations);
 
-        Core::Animation::linear_blend_skinning_normals(
-            _character.normals,
-            _restNormals,
+        linear_blend_skinning_normals(
+            slice1d<vec3>(_character.normals.size, _character.normals.data),
+            slice1d<vec3>(_restNormals.size, _restNormals.data),
             _character.bone_weights,
             _character.bone_indices,
             _character.bone_rest_rotations,
-            _skinningRotations);
+            _global_bone_rotations);
 
-        // 5. Upload to GPU
+        // Update GPU Buffers
         glBindBuffer(GL_ARRAY_BUFFER, _vboPos.Get());
-        glBufferSubData(GL_ARRAY_BUFFER, 0, _character.positions.size * sizeof(Core::Math::vec3), _character.positions.data);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, _character.positions.size * sizeof(vec3), _character.positions.data);
 
         glBindBuffer(GL_ARRAY_BUFFER, _vboNorm.Get());
-        glBufferSubData(GL_ARRAY_BUFFER, 0, _character.normals.size * sizeof(Core::Math::vec3), _character.normals.data);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, _character.normals.size * sizeof(vec3), _character.normals.data);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     void CaseBVHMotionMatching::OnSetupPropsUI() {
-        const char * bvhNames[] = {
-            "Aiming", "Dance", "FallAndGetUp", "Fight", "Ground", "MultipleActions", "Obstacles", "PushAndStumble", "Run", "Walk"
-        };
-
-        if (ImGui::Combo("BVH File", &_currentBVH, bvhNames, IM_ARRAYSIZE(bvhNames))) {
-            _bvh = nullptr;
-            _joints.clear();
+        if (ImGui::Button(_controlCharacter ? "Control: Character" : "Control: Camera")) {
+            _controlCharacter = ! _controlCharacter;
         }
 
-        if (_loadFuture.valid()) {
-            ImGui::Text("Loading %s...", bvhNames[_currentBVH]);
-            ImGui::SameLine();
-        } else {
-            if (ImGui::Button("Load")) {
-                std::string path = std::string(VCX::Assets::BVHFiles[_currentBVH]);
-                _loadFuture      = std::async(std::launch::async, [path]() {
-                    return std::make_unique<bvh11::BvhObject>(path);
-                });
-            }
-            ImGui::SameLine();
-        }
+        ImGui::Text(ImGui::IsKeyDown(ImGuiKey_O) ? "Strafing Active" : "Hold 'O' to Strafe");
 
-        if (ImGui::Button(_stopped ? "Start" : "Pause")) _stopped = ! _stopped;
-        ImGui::SameLine();
         if (ImGui::Button("Reset")) {
-            _currentTime = 0.0f;
-            _frameIndex  = 0;
+            _position                   = Core::Math::vec3(0, 0, 0);
+            _velocity                   = Core::Math::vec3(0, 0, 0);
+            _acceleration               = Core::Math::vec3(0, 0, 0);
+            _rotation                   = Core::Math::quat(1, 0, 0, 0);
+            _angularVelocity            = Core::Math::vec3(0, 0, 0);
+            _character_position         = Core::Math::vec3(0, 0, 0);
+            _character_rotation         = Core::Math::quat(1, 0, 0, 0);
+            _character_velocity         = Core::Math::vec3(0, 0, 0);
+            _character_angular_velocity = Core::Math::vec3(0, 0, 0);
+            _search_timer               = 0.0f;
         }
 
         ImGui::Checkbox("Anti-aliasing", &_enableMSAA);
         ImGui::SameLine();
         ImGui::Checkbox("Show Axis", &_showAxis);
-
-        if (_bvh) {
-            if (ImGui::SliderInt("Frame", &_frameIndex, 0, _bvh->frames() - 1)) {
-                _currentTime = _frameIndex * _bvh->frame_time();
-            }
-        }
+        ImGui::Checkbox("Enable IK", &_enableIK);
     }
 
     Common::CaseRenderResult CaseBVHMotionMatching::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
-        if (_loadFuture.valid() && _loadFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-            _bvh = _loadFuture.get();
-            OnBVHLoaded();
-        }
-
         _frame.Resize(desiredSize, _enableMSAA ? 4 : 1);
 
         _cameraManager.Update(_camera);
+
+        // Update Controller
+        float dt = ImGui::GetIO().DeltaTime;
+        UpdateController(dt);
+
         _program.GetUniforms().SetByName("mvp", _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second)) * _camera.GetViewMatrix());
         _program.GetUniforms().SetByName("matModel", glm::mat4(1.0f));
         _program.GetUniforms().SetByName("matNormal", glm::mat4(1.0f));
@@ -273,21 +261,27 @@ namespace VCX::Labs::MotionMatching {
         glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (! _stopped) {
-            UpdateFrame(ImGui::GetIO().DeltaTime);
-        } else {
-            // Still update to render current frame if paused
-            UpdateFrame(0.0f);
-        }
-
+        // Render Character (Static for now)
         gl_using(_program);
         glBindVertexArray(_vao.Get());
         glDrawElements(GL_TRIANGLES, _character.triangles.size, GL_UNSIGNED_SHORT, 0);
         glBindVertexArray(0);
 
         // Render Ground
-        glm::mat4 mvp = _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second)) * _camera.GetViewMatrix();
+        glm::mat4 view = _camera.GetViewMatrix();
+        glm::mat4 proj = _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second));
+        glm::mat4 mvp  = proj * view;
         _sceneEnv.Render(mvp, _showAxis);
+
+        // Render Simulation Object
+        _simulationObject.Render(
+            view,
+            proj,
+            glm::vec3(_position.x, _position.y, _position.z),
+            glm::quat(_rotation.w, _rotation.x, _rotation.y, _rotation.z),
+            _predictedPositions,
+            _predictedRotations,
+            glm::vec3(_desiredVelocity.x, _desiredVelocity.y, _desiredVelocity.z));
 
         glDisable(GL_DEPTH_TEST);
 
@@ -300,6 +294,7 @@ namespace VCX::Labs::MotionMatching {
     }
 
     void CaseBVHMotionMatching::OnProcessInput(ImVec2 const & pos) {
+        _cameraManager.EnableKeyboardPan = ! _controlCharacter;
         _cameraManager.ProcessInput(_camera, pos);
     }
 } // namespace VCX::Labs::MotionMatching

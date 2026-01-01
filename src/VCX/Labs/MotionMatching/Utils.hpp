@@ -21,4 +21,6 @@ namespace VCX::Labs::MotionMatching {
     void AddBox(std::vector<VertexColor> & vertices, glm::vec3 center, glm::vec3 size, glm::vec3 color);
     void AddCone(std::vector<VertexColor> & vertices, glm::vec3 baseCenter, float radius, float height, glm::vec3 axis, glm::vec3 color);
     void AddSphere(std::vector<VertexColor> & vertices, glm::vec3 center, float radius, glm::vec3 color);
+    void AddLine(std::vector<VertexColor> & vertices, glm::vec3 start, glm::vec3 end, glm::vec3 color);
+    void AddCircle(std::vector<VertexColor> & vertices, glm::vec3 center, float radius, glm::vec3 normal, glm::vec3 color);
 } // namespace VCX::Labs::MotionMatching

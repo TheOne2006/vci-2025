@@ -79,4 +79,25 @@ namespace VCX::Labs::MotionMatching {
             }
         }
     }
+
+    void AddLine(std::vector<VertexColor> & vertices, glm::vec3 start, glm::vec3 end, glm::vec3 color) {
+        vertices.push_back({ start, color });
+        vertices.push_back({ end, color });
+    }
+
+    void AddCircle(std::vector<VertexColor> & vertices, glm::vec3 center, float radius, glm::vec3 normal, glm::vec3 color) {
+        int       segments = 32;
+        glm::vec3 u        = (std::abs(normal.y) > 0.9f) ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
+        glm::vec3 v        = glm::normalize(glm::cross(normal, u));
+        u                  = glm::cross(v, normal);
+
+        for (int i = 0; i < segments; ++i) {
+            float     angle1 = (float) i / segments * 2.0f * glm::pi<float>();
+            float     angle2 = (float) (i + 1) / segments * 2.0f * glm::pi<float>();
+            glm::vec3 p1     = center + radius * (u * std::cos(angle1) + v * std::sin(angle1));
+            glm::vec3 p2     = center + radius * (u * std::cos(angle2) + v * std::sin(angle2));
+            vertices.push_back({ p1, color });
+            vertices.push_back({ p2, color });
+        }
+    }
 } // namespace VCX::Labs::MotionMatching

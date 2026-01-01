@@ -13,12 +13,12 @@ namespace VCX::Labs::Common {
     }
 
     void OrbitCameraManager::Reset(Engine::Camera & camera) {
-        Engine::Spherical sp0  = _position0 - _target0;
-        Engine::Spherical sp   = camera.Eye - camera.Target;
-        _spDelta.Phi           = sp0.Phi - sp.Phi;
-        _spDelta.Theta         = sp0.Theta - sp.Theta;
-        _panOffset             = _target0 - camera.Target;
-        _logScale              = glm::log(sp0.Radius / sp.Radius) / glm::log(0.9f);
+        Engine::Spherical sp0 = _position0 - _target0;
+        Engine::Spherical sp  = camera.Eye - camera.Target;
+        _spDelta.Phi          = sp0.Phi - sp.Phi;
+        _spDelta.Theta        = sp0.Theta - sp.Theta;
+        _panOffset            = _target0 - camera.Target;
+        _logScale             = glm::log(sp0.Radius / sp.Radius) / glm::log(0.9f);
     }
 
     void OrbitCameraManager::Update(Engine::Camera & camera) {
@@ -131,7 +131,7 @@ namespace VCX::Labs::Common {
         if (anyHeld) {
             _state |= StateHold;
         }
-        if (panningByMouse || (EnablePan && (panningByKeyBoard[0] || panningByKeyBoard[1] || panningByKeyBoard[2] || panningByKeyBoard[3] || panningByKeyBoard[4] || panningByKeyBoard[5]))) {
+        if (panningByMouse || (EnablePan && EnableKeyboardPan && (panningByKeyBoard[0] || panningByKeyBoard[1] || panningByKeyBoard[2] || panningByKeyBoard[3] || panningByKeyBoard[4] || panningByKeyBoard[5]))) {
             // perspective
             glm::vec3 direction      = camera.Target - camera.Eye;
             float     targetDistance = glm::length(direction);
@@ -169,4 +169,4 @@ namespace VCX::Labs::Common {
             _state |= StateDolly;
         }
     }
-}
+} // namespace VCX::Labs::Common

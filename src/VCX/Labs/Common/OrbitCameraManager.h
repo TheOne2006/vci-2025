@@ -7,7 +7,7 @@
 namespace VCX::Labs::Common {
     class OrbitCameraManager : public Engine::ICameraManager {
     public:
-        OrbitCameraManager(glm::vec3 const & eye = glm::vec3(0.f, 0.f, 1.f), glm::vec3 const & target = glm::vec3(0)) :
+        OrbitCameraManager(glm::vec3 const & eye = glm::vec3(0.f, 0.f, 1.f), glm::vec3 const & target = glm::vec3(0)):
             _position0(eye),
             _target0(target) {
         }
@@ -25,7 +25,7 @@ namespace VCX::Labs::Common {
         // If set, the interval [ min, max ] must be a sub-interval of [ - 2 PI, 2 PI ], with ( max - min < 2 PI )
         float MinAzimuthAngle = -std::numeric_limits<float>::infinity();
         float MaxAzimuthAngle = std::numeric_limits<float>::infinity();
-        
+
         // Set to true to enable damping (inertia)
         bool  EnableDamping = true;
         float DampingFactor = 0.1f;
@@ -41,17 +41,18 @@ namespace VCX::Labs::Common {
 
         // Set to false to disable panning
         bool  EnablePan          = true;
+        bool  EnableKeyboardPan  = true;
         float PanSpeed           = 1.f;
         bool  ScreenSpacePanning = false; // if false, pan orthogonal to world-space direction camera.up
 
         bool  AutoRotate      = true;
         float AutoRotateSpeed = 2.f;
 
-        void Save(Engine::Camera const & camera);
-        void Reset(Engine::Camera & camera);
+        void         Save(Engine::Camera const & camera);
+        void         Reset(Engine::Camera & camera);
         virtual void Update(Engine::Camera & camera) override;
-        void ProcessInput(Engine::Camera & camera, ImVec2 const & mousePos);
-    
+        void         ProcessInput(Engine::Camera & camera, ImVec2 const & mousePos);
+
     private:
         enum StateBits {
             StateNone   = 0,
@@ -63,9 +64,9 @@ namespace VCX::Labs::Common {
 
         glm::vec3         _target0;
         glm::vec3         _position0;
-        glm::vec3         _panOffset    = glm::vec3(0.f);
-        float             _logScale     = 0.f;
-        int               _state        = StateNone;
+        glm::vec3         _panOffset = glm::vec3(0.f);
+        float             _logScale  = 0.f;
+        int               _state     = StateNone;
         Engine::Spherical _spDelta;
     };
-}
+} // namespace VCX::Labs::Common
