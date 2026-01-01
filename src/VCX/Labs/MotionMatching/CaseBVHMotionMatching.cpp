@@ -1,7 +1,7 @@
 #include "Labs/MotionMatching/CaseBVHMotionMatching.h"
 #include "Assets/bundled.h"
-#include "Labs/MotionMatching/Core/Animation/bone_operations.hpp"
 #include "Labs/MotionMatching/Core/Animation/character.hpp"
+#include "Labs/MotionMatching/Core/Animation/constant.hpp"
 #include "Labs/MotionMatching/Core/Animation/controller.hpp"
 #include "Labs/MotionMatching/Core/Animation/database.hpp"
 #include "Labs/MotionMatching/Core/Animation/update.hpp"
@@ -20,7 +20,7 @@ namespace VCX::Labs::MotionMatching {
         Core::Animation::character_load(_character, VCX::Assets::CharacterPath[0].data());
 
         // Load Database
-        Core::Animation::database_load(_database, "assets/data/database.bin");
+        Core::Animation::database_load(_database, VCX::Assets::DatabasePath[0].data());
 
         float feature_weight_foot_position         = 0.75f;
         float feature_weight_foot_velocity         = 1.0f;
@@ -38,11 +38,6 @@ namespace VCX::Labs::MotionMatching {
 
         // Resize Arrays
         int nbones = _database.nbones();
-        _bone_positions.resize(nbones);
-        _bone_velocities.resize(nbones);
-        _bone_rotations.resize(nbones);
-        _bone_angular_velocities.resize(nbones);
-
         _bone_offset_positions.resize(nbones);
         _bone_offset_velocities.resize(nbones);
         _bone_offset_rotations.resize(nbones);
@@ -137,6 +132,25 @@ namespace VCX::Labs::MotionMatching {
         using namespace Core::Math;
         using namespace Core::Animation;
 
+        // Apply UI parameters to global constants
+        MotionMatchingConstants::SimulationHalflife         = _uiSimulationHalflife;
+        MotionMatchingConstants::SimulationRotationHalflife = _uiSimulationRotationHalflife;
+        MotionMatchingConstants::InertializationHalflife    = _uiInertializationHalflife;
+        MotionMatchingConstants::GaitChangeHalflife         = _uiGaitChangeHalflife;
+        MotionMatchingConstants::IKBlendingHalflife         = _uiIKBlendingHalflife;
+
+        MotionMatchingConstants::ForwardSpeed      = _uiForwardSpeed;
+        MotionMatchingConstants::SideSpeed         = _uiSideSpeed;
+        MotionMatchingConstants::BackwardSpeed     = _uiBackwardSpeed;
+        MotionMatchingConstants::WalkForwardSpeed  = _uiWalkForwardSpeed;
+        MotionMatchingConstants::WalkSideSpeed     = _uiWalkSideSpeed;
+        MotionMatchingConstants::WalkBackwardSpeed = _uiWalkBackwardSpeed;
+        MotionMatchingConstants::InputRunningSpeed = _uiInputRunningSpeed;
+        MotionMatchingConstants::InputWalkingSpeed = _uiInputWalkingSpeed;
+
+        bool isRunning     = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+        bool desiredStrafe = ImGui::IsKeyDown(ImGuiKey_O) && isRunning;
+
         // Input
         float x = 0.0f;
         float y = 0.0f;
@@ -147,7 +161,17 @@ namespace VCX::Labs::MotionMatching {
             if (ImGui::IsKeyDown(ImGuiKey_D)) x -= 1.0f; // Right
         }
 
-        bool desiredStrafe = ImGui::IsKeyDown(ImGuiKey_O);
+        float length = std::sqrt(x * x + y * y);
+        if (length > 1e-5f) {
+            float targetSpeed = isRunning ? MotionMatchingConstants::InputRunningSpeed : MotionMatchingConstants::InputWalkingSpeed;
+            float scale       = targetSpeed / length;
+            x *= scale;
+            y *= scale;
+        }
+
+        float fwrdSpeed = isRunning ? MotionMatchingConstants::ForwardSpeed : MotionMatchingConstants::WalkForwardSpeed;
+        float sideSpeed = isRunning ? MotionMatchingConstants::SideSpeed : MotionMatchingConstants::WalkSideSpeed;
+        float backSpeed = isRunning ? MotionMatchingConstants::BackwardSpeed : MotionMatchingConstants::WalkBackwardSpeed;
 
         vec3 stickLeft  = gamepad_get_stick(x, y);
         vec3 stickRight = vec3(0, 0, 0); // Right stick not implemented for keyboard yet
@@ -157,17 +181,14 @@ namespace VCX::Labs::MotionMatching {
         glm::vec3 camDir        = glm::normalize(_camera.Target - _camera.Eye);
         float     cameraAzimuth = std::atan2(camDir.x, camDir.z);
 
-        // Compute desired velocity for visualization
-        const float fwrd_speed = 4.0f;
-        const float side_speed = 3.0f;
-        const float back_speed = 2.5f;
-        _desiredVelocity       = desired_velocity_update(
+        // Compute desired velocity for visualization using MotionMatchingConstants
+        _desiredVelocity = desired_velocity_update(
             stickLeft,
             cameraAzimuth,
             _rotation,
-            fwrd_speed,
-            side_speed,
-            back_speed);
+            fwrdSpeed,
+            sideSpeed,
+            backSpeed);
 
         // Prepare Trajectory Buffers
         int               predictionSteps = 4;
@@ -176,7 +197,7 @@ namespace VCX::Labs::MotionMatching {
         std::vector<vec3> trajAngVel(predictionSteps);
 
         MotionMatchingUpdate(
-            _position, _velocity, _acceleration, _rotation, _angularVelocity, _character_position, _character_rotation, _character_velocity, _character_angular_velocity, slice1d<vec3>(predictionSteps, trajPos.data()), slice1d<vec3>(predictionSteps, trajVel.data()), slice1d<vec3>(predictionSteps, trajAcc.data()), slice1d<quat>(predictionSteps, trajRot.data()), slice1d<vec3>(predictionSteps, trajAngVel.data()), _current_frame_index, _current_frame_time, _search_timer, _bone_offset_positions, _bone_offset_velocities, _bone_offset_rotations, _bone_offset_angular_velocities, _transition_src_position, _transition_src_rotation, _transition_dst_position, _transition_dst_rotation, _global_bone_positions, _global_bone_rotations, _contact_states, _contact_locks, _contact_positions, _contact_velocities, _contact_points, _contact_targets, _contact_offset_positions, _contact_offset_velocities, _database, _character, stickLeft, stickRight, cameraAzimuth, desiredStrafe, dt, _enableIK // enable_ik
+            _position, _velocity, _acceleration, _rotation, _angularVelocity, _character_position, _character_rotation, _character_velocity, _character_angular_velocity, slice1d<vec3>(predictionSteps, trajPos.data()), slice1d<vec3>(predictionSteps, trajVel.data()), slice1d<vec3>(predictionSteps, trajAcc.data()), slice1d<quat>(predictionSteps, trajRot.data()), slice1d<vec3>(predictionSteps, trajAngVel.data()), _current_frame_index, _current_frame_time, _search_timer, _bone_offset_positions, _bone_offset_velocities, _bone_offset_rotations, _bone_offset_angular_velocities, _transition_src_position, _transition_src_rotation, _transition_dst_position, _transition_dst_rotation, _global_bone_positions, _global_bone_rotations, _contact_states, _contact_locks, _contact_positions, _contact_velocities, _contact_points, _contact_targets, _contact_offset_positions, _contact_offset_velocities, _database, _character, stickLeft, stickRight, cameraAzimuth, desiredStrafe, fwrdSpeed, sideSpeed, backSpeed, dt, _enableIK // enable_ik
         );
 
         // Update Predicted Positions for Rendering
@@ -221,7 +242,10 @@ namespace VCX::Labs::MotionMatching {
             _controlCharacter = ! _controlCharacter;
         }
 
-        ImGui::Text(ImGui::IsKeyDown(ImGuiKey_O) ? "Strafing Active" : "Hold 'O' to Strafe");
+        bool isRunning = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+        ImGui::Text(ImGui::IsKeyDown(ImGuiKey_O) && isRunning ? "Strafing Active" : "Hold 'O' to Strafe");
+        ImGui::Text(isRunning ? "Running Active" : "Hold 'Shift' to Run");
+        ImGui::TextDisabled("(Strafing only available when running)");
 
         if (ImGui::Button("Reset")) {
             _position                   = Core::Math::vec3(0, 0, 0);
@@ -240,6 +264,66 @@ namespace VCX::Labs::MotionMatching {
         ImGui::SameLine();
         ImGui::Checkbox("Show Axis", &_showAxis);
         ImGui::Checkbox("Enable IK", &_enableIK);
+
+        // Exposed parameters UI
+        ImGui::Separator();
+        ImGui::Text("Motion Matching Parameters");
+        ImGui::TextDisabled("Adjust parameters in real-time");
+
+        // Half-life parameters
+        if (ImGui::CollapsingHeader("Half-life Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.6f);
+
+            ImGui::Text("Simulation Half-life (position)");
+            ImGui::SliderFloat("##SimulationHalflife", &_uiSimulationHalflife, HalfLifeRange.Min, HalfLifeRange.Max, "%.3f");
+
+            ImGui::Text("Simulation Half-life (rotation)");
+            ImGui::SliderFloat("##SimulationRotationHalflife", &_uiSimulationRotationHalflife, HalfLifeRange.Min, HalfLifeRange.Max, "%.3f");
+
+            ImGui::Text("Inertialization Half-life");
+            ImGui::SliderFloat("##InertializationHalflife", &_uiInertializationHalflife, HalfLifeRange.Min, HalfLifeRange.Max, "%.3f");
+
+            ImGui::Text("Gait Change Half-life");
+            ImGui::SliderFloat("##GaitChangeHalflife", &_uiGaitChangeHalflife, HalfLifeRange.Min, HalfLifeRange.Max, "%.3f");
+
+            ImGui::Text("IK Blending Half-life");
+            ImGui::SliderFloat("##IKBlendingHalflife", &_uiIKBlendingHalflife, HalfLifeRange.Min, HalfLifeRange.Max, "%.3f");
+
+            ImGui::PopItemWidth();
+        }
+
+        // Speed parameters
+        if (ImGui::CollapsingHeader("Speed Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.6f);
+
+            ImGui::Text("Running");
+            ImGui::Text("Forward Speed");
+            ImGui::SliderFloat("##ForwardSpeedRun", &_uiForwardSpeed, SpeedRange.Min, SpeedRange.Max, "%.2f");
+            ImGui::Text("Side Speed");
+            ImGui::SliderFloat("##SideSpeedRun", &_uiSideSpeed, SpeedRange.Min, SpeedRange.Max, "%.2f");
+            ImGui::Text("Backward Speed");
+            ImGui::SliderFloat("##BackwardSpeedRun", &_uiBackwardSpeed, SpeedRange.Min, SpeedRange.Max, "%.2f");
+
+            ImGui::Text("Walking");
+            ImGui::Text("Forward Speed");
+            ImGui::SliderFloat("##ForwardSpeedWalk", &_uiWalkForwardSpeed, WalkSpeedRange.Min, WalkSpeedRange.Max, "%.2f");
+            ImGui::Text("Side Speed");
+            ImGui::SliderFloat("##SideSpeedWalk", &_uiWalkSideSpeed, WalkSpeedRange.Min, WalkSpeedRange.Max, "%.2f");
+            ImGui::Text("Backward Speed");
+            ImGui::SliderFloat("##BackwardSpeedWalk", &_uiWalkBackwardSpeed, WalkSpeedRange.Min, WalkSpeedRange.Max, "%.2f");
+
+            ImGui::Text("Input Sensitivity");
+            ImGui::Text("Running Sensitivity");
+            ImGui::SliderFloat("##RunningSensitivity", &_uiInputRunningSpeed, InputSpeedRange.Min, InputSpeedRange.Max, "%.2f");
+            ImGui::Text("Walking Sensitivity");
+            ImGui::SliderFloat("##WalkingSensitivity", &_uiInputWalkingSpeed, InputSpeedRange.Min, InputSpeedRange.Max, "%.2f");
+
+            ImGui::PopItemWidth();
+        }
+
+        // Parameters are applied automatically in UpdateController
+        ImGui::Separator();
+        ImGui::TextDisabled("Parameters are applied automatically during update");
     }
 
     Common::CaseRenderResult CaseBVHMotionMatching::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {

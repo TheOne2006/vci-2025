@@ -51,11 +51,6 @@ namespace VCX::Labs::MotionMatching {
 
         // Animation Data
         Core::Animation::database             _database;
-        Core::Math::array1d<Core::Math::vec3> _bone_positions;
-        Core::Math::array1d<Core::Math::vec3> _bone_velocities;
-        Core::Math::array1d<Core::Math::quat> _bone_rotations;
-        Core::Math::array1d<Core::Math::vec3> _bone_angular_velocities;
-
         Core::Math::array1d<Core::Math::vec3> _bone_offset_positions;
         Core::Math::array1d<Core::Math::vec3> _bone_offset_velocities;
         Core::Math::array1d<Core::Math::quat> _bone_offset_rotations;
@@ -109,5 +104,34 @@ namespace VCX::Labs::MotionMatching {
 
         bool _controlCharacter = true;
         bool _enableIK         = true;
+
+        // Exposed parameters for UI control
+        // Half-life parameters
+        float _uiSimulationHalflife         = 0.27f;
+        float _uiSimulationRotationHalflife = 0.27f;
+        float _uiInertializationHalflife    = 0.1f;
+        float _uiGaitChangeHalflife         = 0.1f;
+        float _uiIKBlendingHalflife         = 0.1f;
+
+        // Speed parameters
+        float _uiForwardSpeed      = 4.0f;
+        float _uiSideSpeed         = 3.0f;
+        float _uiBackwardSpeed     = 2.5f;
+        float _uiWalkForwardSpeed  = 1.75f;
+        float _uiWalkSideSpeed     = 1.5f;
+        float _uiWalkBackwardSpeed = 1.25f;
+        float _uiInputRunningSpeed = 1.3f;
+        float _uiInputWalkingSpeed = 1.0f;
+
+        // Parameter ranges
+        struct ParamRange {
+            float Min;
+            float Max;
+        };
+
+        static constexpr ParamRange HalfLifeRange   = { 0.01f, 1.0f };
+        static constexpr ParamRange SpeedRange      = { 0.1f, 10.0f };
+        static constexpr ParamRange InputSpeedRange = { 0.1f, 5.0f };
+        static constexpr ParamRange WalkSpeedRange  = { 0.1f, 5.0f };
     };
 } // namespace VCX::Labs::MotionMatching

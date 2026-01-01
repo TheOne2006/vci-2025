@@ -1,5 +1,6 @@
 #include "Labs/MotionMatching/Core/Animation/update.hpp"
 #include "Labs/MotionMatching/Core/Animation/bone_operations.hpp"
+#include "Labs/MotionMatching/Core/Animation/constant.hpp"
 #include "Labs/MotionMatching/Core/Animation/controller.hpp"
 #include "Labs/MotionMatching/Core/Math/common.h"
 #include "Labs/MotionMatching/Core/Math/quat.h"
@@ -178,20 +179,20 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
         const vec3 & gamepad_stick_right,
         const float  camera_azimuth,
         const bool   desired_strafe,
+        const float  fwrd_speed,
+        const float  side_speed,
+        const float  back_speed,
         const float  dt,
         const bool   enable_ik) {
         // ----------------------------------------------------------------------------
         // 1. Input Processing & Trajectory Prediction
         // ----------------------------------------------------------------------------
 
-        const float search_time_interval         = 0.1f;
-        const float simulation_halflife          = 0.27f;
-        const float simulation_rotation_halflife = 0.27f;
-        const float inertialization_halflife     = 0.1f;
-
-        const float fwrd_speed = 4.0f;
-        const float side_speed = 3.0f;
-        const float back_speed = 2.5f;
+        // Use constants from MotionMatchingConstants
+        const float search_time_interval         = MotionMatchingConstants::SearchTimeInterval;
+        const float simulation_halflife          = MotionMatchingConstants::SimulationHalflife;
+        const float simulation_rotation_halflife = MotionMatchingConstants::SimulationRotationHalflife;
+        const float inertialization_halflife     = MotionMatchingConstants::InertializationHalflife;
 
         vec3 desired_velocity = desired_velocity_update(
             gamepad_stick_left,
@@ -236,7 +237,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
             fwrd_speed,
             side_speed,
             back_speed,
-            20.0f * dt);
+            MotionMatchingConstants::TrajectoryPredictionFactor / 60.0f);
 
         trajectory_desired_rotations_predict(
             desired_rotations,
@@ -246,7 +247,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
             gamepad_stick_left,
             gamepad_stick_right,
             desired_strafe,
-            20.0f * dt);
+            MotionMatchingConstants::TrajectoryPredictionFactor / 60.0f);
 
         trajectory_rotations_predict(
             trajectory_rotations,
@@ -255,7 +256,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
             simulation_angular_velocity,
             desired_rotations,
             simulation_rotation_halflife,
-            20.0f * dt);
+            MotionMatchingConstants::TrajectoryPredictionFactor / 60.0f);
 
         trajectory_positions_predict(
             trajectory_positions,
@@ -266,7 +267,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
             simulation_acceleration,
             desired_velocities,
             simulation_halflife,
-            20.0f * dt);
+            MotionMatchingConstants::TrajectoryPredictionFactor / 60.0f);
 
         // ----------------------------------------------------------------------------
         // 2. Motion Matching Query & Search
@@ -446,6 +447,107 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
         // ----------------------------------------------------------------------------
 
         if (enable_ik) {
+            array1d<int> contact_bones(2);
+            contact_bones(0) = Bone_LeftToe;
+            contact_bones(1) = Bone_RightToe;
+
+            // Use IK parameters from MotionMatchingConstants
+            float ik_unlock_radius     = MotionMatchingConstants::IKUnlockRadius;
+            float ik_foot_height       = MotionMatchingConstants::IKFootHeight;
+            float ik_blending_halflife = MotionMatchingConstants::IKBlendingHalflife;
+            float ik_max_length_buffer = MotionMatchingConstants::IKMaxLengthBuffer;
+
+            array1d<bool> global_bone_computed(db.nbones());
+
+            for (int i = 0; i < contact_bones.size; i++) {
+                int toe_bone  = contact_bones(i);
+                int heel_bone = db.bone_parents(toe_bone);
+                int knee_bone = db.bone_parents(heel_bone);
+                int hip_bone  = db.bone_parents(knee_bone);
+                int root_bone = db.bone_parents(hip_bone);
+
+                global_bone_computed.zero();
+
+                forward_kinematics_partial(
+                    out_bone_positions,
+                    out_bone_rotations,
+                    global_bone_computed,
+                    inertialized_bone_positions,
+                    inertialized_bone_rotations,
+                    db.bone_parents,
+                    toe_bone);
+
+                contact_update(
+                    contact_states(i),
+                    contact_locks(i),
+                    contact_positions(i),
+                    contact_velocities(i),
+                    contact_points(i),
+                    contact_targets(i),
+                    contact_offset_positions(i),
+                    contact_offset_velocities(i),
+                    out_bone_positions(toe_bone),
+                    db.contact_states(current_frame_index, i),
+                    ik_unlock_radius,
+                    ik_foot_height,
+                    ik_blending_halflife,
+                    dt);
+
+                vec3 contact_position_clamp = contact_positions(i);
+                contact_position_clamp.y    = maxf(contact_position_clamp.y, ik_foot_height);
+
+                for (int bone : { heel_bone, knee_bone, hip_bone, root_bone }) {
+                    forward_kinematics_partial(
+                        out_bone_positions,
+                        out_bone_rotations,
+                        global_bone_computed,
+                        inertialized_bone_positions,
+                        inertialized_bone_rotations,
+                        db.bone_parents,
+                        bone);
+                }
+
+                ik_two_bone(
+                    inertialized_bone_rotations(hip_bone),
+                    inertialized_bone_rotations(knee_bone),
+                    out_bone_positions(hip_bone),
+                    out_bone_positions(knee_bone),
+                    out_bone_positions(heel_bone),
+                    contact_position_clamp + (out_bone_positions(heel_bone) - out_bone_positions(toe_bone)),
+                    quat_mul_vec3(out_bone_rotations(knee_bone), vec3(0.0f, 1.0f, 0.0f)),
+                    out_bone_rotations(hip_bone),
+                    out_bone_rotations(knee_bone),
+                    out_bone_rotations(root_bone),
+                    ik_max_length_buffer);
+
+                global_bone_computed.zero();
+
+                for (int bone : { toe_bone, heel_bone, knee_bone }) {
+                    forward_kinematics_partial(
+                        out_bone_positions,
+                        out_bone_rotations,
+                        global_bone_computed,
+                        inertialized_bone_positions,
+                        inertialized_bone_rotations,
+                        db.bone_parents,
+                        bone);
+                }
+
+                ik_look_at(
+                    inertialized_bone_rotations(heel_bone),
+                    out_bone_rotations(knee_bone),
+                    out_bone_rotations(heel_bone),
+                    out_bone_positions(heel_bone),
+                    out_bone_positions(toe_bone),
+                    contact_position_clamp);
+            }
+
+            forward_kinematics_full(
+                out_bone_positions,
+                out_bone_rotations,
+                inertialized_bone_positions,
+                inertialized_bone_rotations,
+                db.bone_parents);
         }
     }
 

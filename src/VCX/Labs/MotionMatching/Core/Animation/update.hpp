@@ -25,7 +25,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
      * @param simulation_acceleration [In/Out] Current acceleration of the simulation object.
      * @param simulation_rotation [In/Out] Current rotation of the simulation object.
      * @param simulation_angular_velocity [In/Out] Current angular velocity of the simulation object.
-     * 
+     *
      * @param character_position [In/Out] Current position of the visual character (root).
      * @param character_rotation [In/Out] Current rotation of the visual character (root).
      * @param character_velocity [In/Out] Current velocity of the visual character (root).
@@ -131,6 +131,9 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
         const vec3 & gamepad_stick_right,
         const float  camera_azimuth,
         const bool   desired_strafe,
+        const float  fwrd_speed,
+        const float  side_speed,
+        const float  back_speed,
         const float  dt,
         const bool   enable_ik);
 

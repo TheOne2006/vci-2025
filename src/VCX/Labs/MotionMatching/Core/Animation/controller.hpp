@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Labs/MotionMatching/Core/Animation/constant.hpp"
 #include "Labs/MotionMatching/Core/Math/array.h"
 #include "Labs/MotionMatching/Core/Math/quat.h"
 #include "Labs/MotionMatching/Core/Math/spring.h"
@@ -44,7 +45,7 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
         const float         halflife,
         const float         dt);
 
-    vec3 gamepad_get_stick(float gamepadx, float gamepady, const float deadzone = 0.2f);
+    vec3 gamepad_get_stick(float gamepadx, float gamepady, const float deadzone = MotionMatchingConstants::Deadzone);
 
     vec3 desired_velocity_update(
         const vec3  gamepadstick_left,

@@ -52,12 +52,6 @@ namespace VCX::Assets {
         })
     };
 
-    inline constexpr auto FeaturePath {
-        std::to_array<std::string_view>({
-            "assets/data/features.bin",
-        })
-    };
-
     inline constexpr auto CharacterPath {
         std::to_array<std::string_view>({
             "assets/data/character.bin",
