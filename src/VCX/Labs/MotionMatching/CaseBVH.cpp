@@ -6,59 +6,136 @@
 
 namespace VCX::Labs::MotionMatching {
 
-    BoxRenderer::BoxRenderer():
-        CenterPosition(0, 0, 0),
-        MainAxis(0, 1, 0),
-        BoxItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Triangles),
-        LineItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Lines) {
-        //     3-----2
-        //    /|    /|
-        //   0 --- 1 |
-        //   | 7 - | 6
-        //   |/    |/
-        //   4 --- 5
-        VertsPosition.resize(8);
-        const std::vector<std::uint32_t> line_index = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 }; // line index
-        LineItem.UpdateElementBuffer(line_index);
-
-        const std::vector<std::uint32_t> tri_index = { 0, 1, 2, 0, 2, 3, 1, 4, 0, 1, 4, 5, 1, 6, 5, 1, 2, 6, 2, 3, 7, 2, 6, 7, 0, 3, 7, 0, 4, 7, 4, 5, 6, 4, 6, 7 };
-        BoxItem.UpdateElementBuffer(tri_index);
-    }
-
-    void BoxRenderer::render(Engine::GL::UniqueProgram & program) {
-        auto span_bytes = Engine::make_span_bytes<glm::vec3>(VertsPosition);
-
-        program.GetUniforms().SetByName("u_Color", glm::vec3(121.0f / 255, 207.0f / 255, 171.0f / 255));
-        BoxItem.UpdateVertexBuffer("position", span_bytes);
-        BoxItem.Draw({ program.Use() });
-
-        program.GetUniforms().SetByName("u_Color", glm::vec3(1.0f, 1.0f, 1.0f));
-        LineItem.UpdateVertexBuffer("position", span_bytes);
-        LineItem.Draw({ program.Use() });
-    }
-
-    void BoxRenderer::calc_vert_position() {
-        glm::vec3         new_y = glm::normalize(MainAxis);
-        glm::quat         quat  = glm::rotation(glm::vec3(0, 1, 0), new_y);
-        glm::vec3         new_x = quat * glm::vec3(0.5f * width, 0.0f, 0.0f);
-        glm::vec3         new_z = quat * glm::vec3(0.0f, 0.0f, 0.5f * width);
-        const glm::vec3 & c     = CenterPosition;
-        new_y *= 0.5 * length;
-        VertsPosition[0] = c - new_x + new_y + new_z;
-        VertsPosition[1] = c + new_x + new_y + new_z;
-        VertsPosition[2] = c + new_x + new_y - new_z;
-        VertsPosition[3] = c - new_x + new_y - new_z;
-        VertsPosition[4] = c - new_x - new_y + new_z;
-        VertsPosition[5] = c + new_x - new_y + new_z;
-        VertsPosition[6] = c + new_x - new_y - new_z;
-        VertsPosition[7] = c - new_x - new_y - new_z;
-    }
+    struct Vertex {
+        glm::vec3 Position;
+        glm::vec3 Normal;
+    };
 
     CaseBVH::CaseBVH():
         _program(
-            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/flat.vert"), Engine::GL::SharedShader("assets/shaders/flat.frag") })) {
+            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/skeleton.vert"), Engine::GL::SharedShader("assets/shaders/skeleton.frag") })) {
         _cameraManager.AutoRotate = false;
         _cameraManager.Save(_camera);
+
+        // Define Unit Cube (24 vertices, 36 indices)
+        // Positions
+        glm::vec3 p0(-0.5f, -0.5f, 0.5f);
+        glm::vec3 p1(0.5f, -0.5f, 0.5f);
+        glm::vec3 p2(0.5f, 0.5f, 0.5f);
+        glm::vec3 p3(-0.5f, 0.5f, 0.5f);
+        glm::vec3 p4(-0.5f, -0.5f, -0.5f);
+        glm::vec3 p5(0.5f, -0.5f, -0.5f);
+        glm::vec3 p6(0.5f, 0.5f, -0.5f);
+        glm::vec3 p7(-0.5f, 0.5f, -0.5f);
+
+        // Normals
+        glm::vec3 nFront(0.0f, 0.0f, 1.0f);
+        glm::vec3 nBack(0.0f, 0.0f, -1.0f);
+        glm::vec3 nLeft(-1.0f, 0.0f, 0.0f);
+        glm::vec3 nRight(1.0f, 0.0f, 0.0f);
+        glm::vec3 nTop(0.0f, 1.0f, 0.0f);
+        glm::vec3 nBottom(0.0f, -1.0f, 0.0f);
+
+        std::vector<Vertex> vertices = {
+            // Front
+            { p0,  nFront },
+            { p1,  nFront },
+            { p2,  nFront },
+            { p3,  nFront },
+            // Back
+            { p5,   nBack },
+            { p4,   nBack },
+            { p7,   nBack },
+            { p6,   nBack },
+            // Left
+            { p4,   nLeft },
+            { p0,   nLeft },
+            { p3,   nLeft },
+            { p7,   nLeft },
+            // Right
+            { p1,  nRight },
+            { p5,  nRight },
+            { p6,  nRight },
+            { p2,  nRight },
+            // Top
+            { p3,    nTop },
+            { p2,    nTop },
+            { p6,    nTop },
+            { p7,    nTop },
+            // Bottom
+            { p4, nBottom },
+            { p5, nBottom },
+            { p1, nBottom },
+            { p0, nBottom }
+        };
+
+        std::vector<uint32_t> indices = {
+            0, 1, 2, 2, 3, 0, // Front
+            4,
+            5,
+            6,
+            6,
+            7,
+            4, // Back
+            8,
+            9,
+            10,
+            10,
+            11,
+            8, // Left
+            12,
+            13,
+            14,
+            14,
+            15,
+            12, // Right
+            16,
+            17,
+            18,
+            18,
+            19,
+            16, // Top
+            20,
+            21,
+            22,
+            22,
+            23,
+            20 // Bottom
+        };
+
+        _indexCount = indices.size();
+
+        glBindVertexArray(_vao.Get());
+
+        glBindBuffer(GL_ARRAY_BUFFER, _vboMesh.Get());
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
+
+        // Position (loc 0)
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) 0);
+
+        // Normal (loc 1)
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, Normal));
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _eboMesh.Get());
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t), indices.data(), GL_STATIC_DRAW);
+
+        // Instance Buffer (loc 2, 3, 4, 5 for mat4)
+        glBindBuffer(GL_ARRAY_BUFFER, _vboInstance.Get());
+        // Initial allocation, will be updated every frame
+        // We don't know the size yet, but we can allocate some initial size or just leave it empty for now.
+        // But we need to set up pointers.
+
+        std::size_t vec4Size = sizeof(glm::vec4);
+        for (int i = 0; i < 4; ++i) {
+            glEnableVertexAttribArray(2 + i);
+            glVertexAttribPointer(2 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4), (void *) (i * vec4Size));
+            glVertexAttribDivisor(2 + i, 1);
+        }
+
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     void CaseBVH::OnBVHLoaded() {
@@ -70,8 +147,6 @@ namespace VCX::Labs::MotionMatching {
         _localRotations.resize(numJoints);
         _globalPositions.resize(numJoints);
         _globalRotations.resize(numJoints);
-
-        _boneRenderers.clear();
 
         for (int i = 0; i < numJoints; ++i) {
             auto parent = _joints[i]->parent();
@@ -85,7 +160,6 @@ namespace VCX::Labs::MotionMatching {
                     }
                 }
                 _boneParents(i) = parentIndex;
-                _boneRenderers.emplace_back(); // Create renderer for this bone (connection to parent)
             } else {
                 _boneParents(i) = -1;
             }
@@ -123,28 +197,42 @@ namespace VCX::Labs::MotionMatching {
             _localRotations,
             _boneParents);
 
-        // Update renderers
-        int rendererIdx = 0;
+        _instances.clear();
         for (int i = 0; i < _joints.size(); ++i) {
             int parentIdx = _boneParents(i);
             if (parentIdx != -1) {
-                auto & renderer = _boneRenderers[rendererIdx++];
-
                 auto pPos = _globalPositions(parentIdx);
                 auto cPos = _globalPositions(i);
 
                 glm::vec3 p(pPos.x, pPos.y, pPos.z);
                 glm::vec3 c(cPos.x, cPos.y, cPos.z);
 
-                renderer.CenterPosition = (p + c) * 0.5f;
-                glm::vec3 axis          = c - p;
-                renderer.length         = glm::length(axis);
-                if (renderer.length > 1e-5f) {
-                    renderer.MainAxis = glm::normalize(axis);
+                glm::vec3 center = (p + c) * 0.5f;
+                glm::vec3 axis   = c - p;
+                float     length = glm::length(axis);
+
+                if (length < 1e-5f) continue;
+
+                glm::vec3 mainAxis(0, 1, 0); // The cube's local Y axis
+                glm::vec3 targetAxis = glm::normalize(axis);
+
+                // Handle parallel vectors for rotation
+                glm::quat rotation;
+                if (glm::abs(glm::dot(mainAxis, targetAxis)) > 0.9999f) {
+                    if (glm::dot(mainAxis, targetAxis) > 0)
+                        rotation = glm::quat(1, 0, 0, 0);
+                    else
+                        rotation = glm::angleAxis(glm::pi<float>(), glm::vec3(1, 0, 0));
                 } else {
-                    renderer.MainAxis = glm::vec3(0, 1, 0);
+                    rotation = glm::rotation(mainAxis, targetAxis);
                 }
-                renderer.calc_vert_position();
+
+                // Scale: width=0.05, length=length
+                glm::vec3 scale(0.05f, length, 0.05f);
+
+                glm::mat4 model = glm::translate(glm::mat4(1.0f), center) * glm::toMat4(rotation) * glm::scale(glm::mat4(1.0f), scale);
+
+                _instances.push_back(model);
             }
         }
     }
@@ -157,7 +245,7 @@ namespace VCX::Labs::MotionMatching {
         if (ImGui::Combo("BVH File", &_currentBVH, bvhNames, IM_ARRAYSIZE(bvhNames))) {
             _bvh = nullptr;
             _joints.clear();
-            _boneRenderers.clear();
+            _instances.clear();
         }
 
         if (_loadFuture.valid()) {
@@ -180,6 +268,8 @@ namespace VCX::Labs::MotionMatching {
             _frameIndex  = 0;
         }
 
+        ImGui::Checkbox("Anti-aliasing", &_enableMSAA);
+
         if (_bvh) {
             if (ImGui::SliderInt("Frame", &_frameIndex, 0, _bvh->frames() - 1)) {
                 _currentTime = _frameIndex * _bvh->frame_time();
@@ -193,16 +283,25 @@ namespace VCX::Labs::MotionMatching {
             OnBVHLoaded();
         }
 
-        _frame.Resize(desiredSize);
+        _frame.Resize(desiredSize, _enableMSAA ? 4 : 1);
 
         _cameraManager.Update(_camera);
         _program.GetUniforms().SetByName("u_Projection", _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second)));
         _program.GetUniforms().SetByName("u_View", _camera.GetViewMatrix());
+        _program.GetUniforms().SetByName("u_Color", glm::vec3(121.0f / 255, 207.0f / 255, 171.0f / 255));
+        _program.GetUniforms().SetByName("u_LightDir", glm::vec3(1.0f, 1.0f, 1.0f));
 
         gl_using(_frame);
-        glEnable(GL_LINE_SMOOTH);
-        glLineWidth(0.5f);
-        glPointSize(4.f);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+        glDisable(GL_CULL_FACE);
+        glDisable(GL_BLEND);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDepthMask(GL_TRUE);
+
+        // Clear the framebuffer
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         if (! _stopped) {
             UpdateFrame(ImGui::GetIO().DeltaTime);
@@ -211,13 +310,18 @@ namespace VCX::Labs::MotionMatching {
             UpdateFrame(0.0f);
         }
 
-        for (auto & renderer : _boneRenderers) {
-            renderer.render(_program);
+        if (! _instances.empty()) {
+            gl_using(_program);
+
+            glBindBuffer(GL_ARRAY_BUFFER, _vboInstance.Get());
+            glBufferData(GL_ARRAY_BUFFER, _instances.size() * sizeof(glm::mat4), _instances.data(), GL_DYNAMIC_DRAW);
+
+            glBindVertexArray(_vao.Get());
+            glDrawElementsInstanced(GL_TRIANGLES, _indexCount, GL_UNSIGNED_INT, 0, _instances.size());
+            glBindVertexArray(0);
         }
 
-        glLineWidth(1.f);
-        glPointSize(1.f);
-        glDisable(GL_LINE_SMOOTH);
+        glDisable(GL_DEPTH_TEST);
 
         return Common::CaseRenderResult {
             .Fixed     = false,

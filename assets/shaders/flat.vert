@@ -1,14 +1,13 @@
 #version 410 core
 
-layout(location = 0) in  vec3 a_Position;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aColor;
 
-layout(location = 0) out vec3 v_Position;
+uniform mat4 u_MVP;
 
-uniform mat4  u_Projection;
-uniform mat4  u_View;
-uniform vec3  u_Color;
+out vec3 vColor;
 
 void main() {
-    v_Position  = a_Position;
-    gl_Position = u_Projection * u_View * vec4(v_Position, 1.);
+    gl_Position = u_MVP * vec4(aPos, 1.0);
+    vColor = aColor;
 }

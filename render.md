@@ -1,72 +1,113 @@
-# 渲染逻辑分析与问题排查
+# Shader 层面实现分析
 
-## 1. 渲染逻辑概述
+在本项目中，Shader (`character.vs` 和 `character.fs`) 的逻辑非常简单。这是因为**蒙皮计算（Skinning）完全是在 CPU 端完成的**。
 
-目前的渲染流程主要由 `CaseBVH` 类和 `BoxRenderer` 类协同完成，具体步骤如下：
+对于 GPU 来说，它接收到的已经是一个**每一帧都在变形状的“静态”网格**。Shader 不需要知道骨骼、权重或蒙皮矩阵的存在。
 
-### 1.1 初始化 (`CaseBVH::CaseBVH`)
-- **加载 Shader**: 使用 `assets/shaders/flat.vert` 和 `assets/shaders/flat.frag` 创建 Shader 程序。这是一个简单的纯色 Shader。
-- **加载 BVH**: 调用 `LoadBVH` 解析 BVH 文件，构建骨骼层级结构 (`_boneParents`) 和初始数据。
-- **创建渲染器**: 为每一个有父节点的骨骼创建一个 `BoxRenderer` 实例。
+## 1. Vertex Shader (`character.vs`) 分析
 
-### 1.2 数据更新 (`CaseBVH::UpdateFrame`)
-- **时间步进**: 根据 `dt` 更新当前动画时间 `_currentTime`。
-- **获取局部变换**: 从 BVH 数据中获取当前帧每个关节的局部位移和旋转。
-- **正向运动学 (FK)**: 调用 `Core::Animation::forward_kinematics_full` 计算所有关节的**全局位置** (`_globalPositions`) 和旋转。
-- **更新骨骼几何**: 遍历所有 `BoxRenderer`：
-    - 计算父关节到子关节的向量作为骨骼的主轴 (`MainAxis`)。
-    - 计算骨骼长度 (`length`)。
-    - 调用 `BoxRenderer::calc_vert_position`，根据中心点、主轴方向、长度和宽度 (`width`) 计算长方体（骨骼）的 8 个顶点坐标。
+这是一个标准的、用于静态物体的顶点着色器。
 
-### 1.3 渲染循环 (`CaseBVH::OnRender`)
-- **设置相机**: 更新相机矩阵 (`u_Projection`, `u_View`) 并传递给 Shader。
-- **绘制**: 遍历所有 `BoxRenderer`，调用其 `render` 函数。
-    - `render` 函数会将计算好的顶点数据 (`VertsPosition`) 上传到 GPU。
-    - 使用 `BoxItem` 绘制实心长方体（绿色）。
-    - 使用 `LineItem` 绘制线框（白色）。
+```glsl
+#version 410 core
 
-## 2. 为什么什么都渲染不出来？
+// 输入属性 (Attributes)
+// 这些数据是 CPU 每一帧计算好并上传更新后的数据
+in vec3 vertexPosition; // 已经是变形后的位置 (Deformed Position)
+in vec2 vertexTexCoord;
+in vec3 vertexNormal;   // 已经是变形后的法线 (Deformed Normal)
+in vec4 vertexColor;
 
-经过分析，代码逻辑本身没有明显的语法或流程错误，导致“什么都看不见”的主要原因是**数据单位与相机视角的尺度不匹配**。
+// Uniforms (全局变量)
+uniform mat4 mvp;       // Model-View-Projection 矩阵
+uniform mat4 matModel;  // Model 矩阵 (用于世界空间变换)
+uniform mat4 matNormal; // Normal 矩阵 (用于法线变换)
 
-### 2.1 尺度单位差异 (Scale Mismatch)
-- **BVH 数据单位**: 查看 `assets/bvh/walk.bvh` 文件，可以看到 `OFFSET` 的数值在 10 到 100 之间（例如 `OFFSET -9.91 91.97 100.90`）。这说明 BVH 数据的单位是 **厘米 (cm)**。角色的高度大约在 170-180 单位左右。
-- **骨骼宽度设置**: 在 `CaseBVH.h` 中，`BoxRenderer` 的默认宽度设置为：
-  ```cpp
-  float width = 0.05f;
-  ```
-  在厘米单位下，这意味着骨骼的宽度只有 **0.05 厘米 (0.5 毫米)**。这对于一个 1.8 米高的角色来说，细得像一根头发，在屏幕上几乎不可见。
+// 输出到 Fragment Shader
+out vec3 fragPosition;
+out vec2 fragTexCoord;
+out vec4 fragColor;
+out vec3 fragNormal;
 
-### 2.2 相机位置不当
-- **初始位置**: 在 `CaseBVH.h` 中，相机初始化为：
-  ```cpp
-  Engine::Camera _camera { .Eye = glm::vec3(-3, 3, 3) };
-  ```
-  这意味着相机位于世界坐标系原点附近 **3 厘米** 处。
-- **后果**: 
-    - 角色通常位于原点附近或上方（Y轴 90-100cm 处）。
-    - 相机距离角色非常近，甚至可能位于角色的脚底模型内部。
-    - 结合极细的骨骼宽度，相机视野内可能什么都捕捉不到，或者因为 Near Plane (近裁剪面) 的原因被裁剪掉了。
+void main()
+{
+    // 1. 计算世界空间坐标 (用于光照计算)
+    fragPosition = vec3(matModel * vec4(vertexPosition, 1.0));
+    
+    // 2. 传递纹理坐标和颜色
+    fragTexCoord = vertexTexCoord;
+    fragColor = vertexColor;
+    
+    // 3. 计算世界空间法线
+    // 注意：这里的 vertexNormal 已经是 CPU 蒙皮旋转过的法线了
+    // matNormal 通常只是 matModel 的逆转置，用于处理非均匀缩放
+    fragNormal = normalize(vec3(matNormal * vec4(vertexNormal, 1.0)));
 
-## 3. 解决方案
-
-为了修复渲染问题，需要调整相机位置和骨骼宽度以适应 BVH 的厘米单位。
-
-### 建议修改
-
-1.  **调整相机位置**: 将相机移远，以便能看到整个角色（例如距离 300 厘米）。
-2.  **增加骨骼宽度**: 将骨骼宽度增加到可见的程度（例如 5 厘米）。
-
-**修改 `src/VCX/Labs/MotionMatching/CaseBVH.h`:**
-
-```cpp
-// 修改前
-Engine::Camera _camera { .Eye = glm::vec3(-3, 3, 3) };
-// ...
-float width = 0.05f;
-
-// 建议修改后
-Engine::Camera _camera { .Eye = glm::vec3(0, 100, 300) }; // 抬高并拉远相机
-// ...
-float width = 5.0f; // 增加宽度到 5cm
+    // 4. 计算裁剪空间坐标 (最终屏幕位置)
+    gl_Position = mvp * vec4(vertexPosition, 1.0);
+}
 ```
+
+**关键点**：
+*   **没有骨骼数据**：你可以看到输入中没有 `boneIndices` 或 `boneWeights`。
+*   **没有骨骼矩阵**：Uniform 中没有 `boneTransforms[]` 数组。
+*   **纯透视投影**：它所做的仅仅是将输入的顶点位置乘以 MVP 矩阵。
+
+## 2. Fragment Shader (`character.fs`) 分析
+
+这是一个简单的光照着色器，使用了 **Half-Lambert** 光照模型。
+
+```glsl
+#version 410 core
+precision mediump float;
+
+// 从 Vertex Shader 接收的数据
+in vec3 fragPosition;
+in vec2 fragTexCoord;
+in vec4 fragColor;
+in vec3 fragNormal;
+
+uniform vec4 colDiffuse; // 材质漫反射颜色
+
+out vec4 finalColor;     // 最终输出像素颜色
+
+void main()
+{
+    // 硬编码的光照方向 (从右上方打下来的光)
+    vec3 light_dir = normalize(vec3(0.25, -0.8, 0.1));
+
+    // Half-Lambert 光照计算
+    // dot(-light_dir, fragNormal) 计算光线入射角余弦值 (-1 到 1)
+    // + 1.0 然后 / 2.0 将范围映射到 (0 到 1)
+    // 这种光照模型比标准的 Lambert 更柔和，阴影不会死黑，适合卡通或非写实渲染
+    float half_lambert = (dot(-light_dir, fragNormal) + 1.0) / 2.0;
+
+    // 应用光照强度到材质颜色，并加上一点环境光 (0.1)
+    finalColor = vec4(half_lambert * colDiffuse.xyz + 0.1, 1.0);
+}
+```
+
+## 3. 调用流程 (Pipeline)
+
+整个渲染流程是这样的：
+
+1.  **CPU 计算 (C++)**:
+    *   在 `controller.cpp` 中，`deform_character_mesh` 函数根据骨骼动画计算出新的顶点位置 (`v'`) 和法线 (`n'`)。
+    *   这些计算结果被写入内存中的 `Mesh` 结构体。
+
+2.  **数据上传 (CPU -> GPU)**:
+    *   调用 `UpdateMeshBuffer`。
+    *   这会将 `v'` 和 `n'` 覆盖到 GPU 显存中的 Vertex Buffer Object (VBO)。
+    *   对于 Shader 来说，`vertexPosition` 属性的数据源变了。
+
+3.  **Shader 执行 (GPU)**:
+    *   Raylib 内部调用 `glDrawElements`。
+    *   **Vertex Shader** 读取新的 `vertexPosition`，执行 `gl_Position = mvp * vec4(vertexPosition, 1.0)`。
+    *   **Fragment Shader** 上色。
+
+## 4. 总结
+
+在这个项目中，Shader 扮演的是一个**被动**的角色。它不负责复杂的变形逻辑，只负责将 CPU 喂给它的“已经摆好姿势”的网格画在屏幕上。
+
+*   **优点**：Shader 极其简单，兼容性好（甚至可以在不支持 Uniform 数组的老旧硬件上跑）。
+*   **缺点**：每一帧都要上传整个网格的顶点数据到 GPU，带宽消耗大，且 CPU 负担重。如果是现代 3A 游戏，通常会将蒙皮逻辑移入 Vertex Shader (GPU Skinning)。

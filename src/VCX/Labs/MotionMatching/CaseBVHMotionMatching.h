@@ -7,6 +7,7 @@
 #include "Engine/GL/resource.hpp"
 #include "Labs/Common/ICase.h"
 #include "Labs/Common/OrbitCameraManager.h"
+#include "Labs/MotionMatching/Core/Animation/character.hpp"
 #include "Labs/MotionMatching/Core/Math/array.h"
 #include "Labs/MotionMatching/Core/Math/quat.h"
 #include "Labs/MotionMatching/Core/Math/vec.h"
@@ -14,11 +15,11 @@
 
 namespace VCX::Labs::MotionMatching {
 
-    class CaseBVH : public Common::ICase {
+    class CaseBVHMotionMatching : public Common::ICase {
     public:
-        CaseBVH();
+        CaseBVHMotionMatching();
 
-        virtual std::string_view const GetName() override { return "BVH Player"; }
+        virtual std::string_view const GetName() override { return "Motion Matching"; }
 
         virtual void                     OnSetupPropsUI() override;
         virtual Common::CaseRenderResult OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) override;
@@ -36,13 +37,13 @@ namespace VCX::Labs::MotionMatching {
         bool                          _stopped { false };
         bool                          _enableMSAA { true };
 
-        // Instanced Rendering Resources
+        // Character Mesh Resources
+        Core::Animation::character           _character;
         Engine::GL::UniqueVertexArray        _vao;
-        Engine::GL::UniqueArrayBuffer        _vboMesh;
-        Engine::GL::UniqueElementArrayBuffer _eboMesh;
-        Engine::GL::UniqueArrayBuffer        _vboInstance;
-        std::vector<glm::mat4>               _instances;
-        std::size_t                          _indexCount { 0 };
+        Engine::GL::UniqueArrayBuffer        _vboPos;
+        Engine::GL::UniqueArrayBuffer        _vboNorm;
+        Engine::GL::UniqueArrayBuffer        _vboTex;
+        Engine::GL::UniqueElementArrayBuffer _ebo;
 
         // BVH Data
         std::unique_ptr<bvh11::BvhObject>                _bvh;
@@ -55,6 +56,12 @@ namespace VCX::Labs::MotionMatching {
         Core::Math::array1d<Core::Math::quat> _localRotations;
         Core::Math::array1d<Core::Math::vec3> _globalPositions;
         Core::Math::array1d<Core::Math::quat> _globalRotations;
+
+        // Skinning Data (Retargeted)
+        Core::Math::array1d<Core::Math::vec3> _skinningPositions;
+        Core::Math::array1d<Core::Math::quat> _skinningRotations;
+        Core::Math::array1d<Core::Math::vec3> _restPositions;
+        Core::Math::array1d<Core::Math::vec3> _restNormals;
 
         float _currentTime = 0.0f;
         int   _currentBVH  = 0;

@@ -1,9 +1,9 @@
 #version 410 core
 
-in vec3 vertexPosition;
-in vec2 vertexTexCoord;
-in vec3 vertexNormal;
-in vec4 vertexColor;
+layout(location = 0) in vec3 vertexPosition;
+layout(location = 1) in vec2 vertexTexCoord;
+layout(location = 2) in vec3 vertexNormal;
+layout(location = 3) in vec4 vertexColor;
 
 uniform mat4 mvp;
 uniform mat4 matModel;
@@ -19,7 +19,7 @@ void main()
     fragPosition = vec3(matModel * vec4(vertexPosition, 1.0f));
     fragTexCoord = vertexTexCoord;
     fragColor = vertexColor;
-    fragNormal = normalize(vec3(matNormal * vec4(vertexNormal, 1.0f)));
+    fragNormal = normalize(vec3(matNormal * vec4(vertexNormal, 0.0f)));
 
     gl_Position = mvp * vec4(vertexPosition, 1.0f);
 }
