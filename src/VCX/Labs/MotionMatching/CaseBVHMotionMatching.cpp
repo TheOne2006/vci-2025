@@ -7,23 +7,9 @@
 
 namespace VCX::Labs::MotionMatching {
 
-    struct VertexColor {
-        glm::vec3 Position;
-        glm::vec3 Color;
-    };
-
-    struct Vertex {
-        glm::vec3 Position;
-        glm::vec3 Normal;
-    };
-
     CaseBVHMotionMatching::CaseBVHMotionMatching():
         _program(
-            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/character.vert"), Engine::GL::SharedShader("assets/shaders/character.frag") })),
-        _programFlat(
-            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/flat.vert"), Engine::GL::SharedShader("assets/shaders/flat.frag") })),
-        _programGround(
-            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/checkerboard.vert"), Engine::GL::SharedShader("assets/shaders/checkerboard.frag") })) {
+            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/character.vert"), Engine::GL::SharedShader("assets/shaders/character.frag") })) {
         _cameraManager.AutoRotate = false;
         _cameraManager.Save(_camera);
 
@@ -81,132 +67,6 @@ namespace VCX::Labs::MotionMatching {
         }
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, _ebo.Get());
-        glBindVertexArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        // Axis & Dot
-        std::vector<VertexColor> axisVertices;
-
-        auto addBox = [&](glm::vec3 center, glm::vec3 size, glm::vec3 color) {
-            glm::vec3 half = size * 0.5f;
-            glm::vec3 p[8];
-            p[0] = center + glm::vec3(-half.x, -half.y, half.z);
-            p[1] = center + glm::vec3(half.x, -half.y, half.z);
-            p[2] = center + glm::vec3(half.x, half.y, half.z);
-            p[3] = center + glm::vec3(-half.x, half.y, half.z);
-            p[4] = center + glm::vec3(-half.x, -half.y, -half.z);
-            p[5] = center + glm::vec3(half.x, -half.y, -half.z);
-            p[6] = center + glm::vec3(half.x, half.y, -half.z);
-            p[7] = center + glm::vec3(-half.x, half.y, -half.z);
-
-            auto addQuad = [&](int a, int b, int c, int d) {
-                axisVertices.push_back({ p[a], color });
-                axisVertices.push_back({ p[b], color });
-                axisVertices.push_back({ p[c], color });
-                axisVertices.push_back({ p[c], color });
-                axisVertices.push_back({ p[d], color });
-                axisVertices.push_back({ p[a], color });
-            };
-            addQuad(0, 1, 2, 3);
-            addQuad(5, 4, 7, 6);
-            addQuad(4, 0, 3, 7);
-            addQuad(1, 5, 6, 2);
-            addQuad(3, 2, 6, 7);
-            addQuad(4, 5, 1, 0);
-        };
-
-        auto addCone = [&](glm::vec3 baseCenter, float radius, float height, glm::vec3 axis, glm::vec3 color) {
-            int       segments = 16;
-            glm::vec3 tip      = baseCenter + axis * height;
-            glm::vec3 u        = (std::abs(axis.y) > 0.9f) ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
-            glm::vec3 v        = glm::normalize(glm::cross(axis, u));
-            u                  = glm::cross(v, axis);
-
-            for (int i = 0; i < segments; ++i) {
-                float     angle1 = (float) i / segments * 2.0f * glm::pi<float>();
-                float     angle2 = (float) (i + 1) / segments * 2.0f * glm::pi<float>();
-                glm::vec3 p1     = baseCenter + radius * (u * std::cos(angle1) + v * std::sin(angle1));
-                glm::vec3 p2     = baseCenter + radius * (u * std::cos(angle2) + v * std::sin(angle2));
-
-                axisVertices.push_back({ p1, color });
-                axisVertices.push_back({ p2, color });
-                axisVertices.push_back({ tip, color });
-                axisVertices.push_back({ baseCenter, color });
-                axisVertices.push_back({ p2, color });
-                axisVertices.push_back({ p1, color });
-            }
-        };
-
-        auto addSphere = [&](glm::vec3 center, float radius, glm::vec3 color) {
-            int stacks = 10;
-            int slices = 10;
-            for (int i = 0; i < stacks; ++i) {
-                float phi1 = (float) i / stacks * glm::pi<float>();
-                float phi2 = (float) (i + 1) / stacks * glm::pi<float>();
-                for (int j = 0; j < slices; ++j) {
-                    float theta1 = (float) j / slices * 2.0f * glm::pi<float>();
-                    float theta2 = (float) (j + 1) / slices * 2.0f * glm::pi<float>();
-                    auto  getPos = [&](float phi, float theta) {
-                        return center + radius * glm::vec3(std::sin(phi) * std::cos(theta), std::cos(phi), std::sin(phi) * std::sin(theta));
-                    };
-                    glm::vec3 p1 = getPos(phi1, theta1);
-                    glm::vec3 p2 = getPos(phi1, theta2);
-                    glm::vec3 p3 = getPos(phi2, theta2);
-                    glm::vec3 p4 = getPos(phi2, theta1);
-                    axisVertices.push_back({ p1, color });
-                    axisVertices.push_back({ p2, color });
-                    axisVertices.push_back({ p3, color });
-                    axisVertices.push_back({ p3, color });
-                    axisVertices.push_back({ p4, color });
-                    axisVertices.push_back({ p1, color });
-                }
-            }
-        };
-
-        addBox(glm::vec3(0.45f, 0.0f, 0.0f), glm::vec3(0.9f, 0.02f, 0.02f), glm::vec3(1, 0, 0));
-        addCone(glm::vec3(0.9f, 0.0f, 0.0f), 0.04f, 0.1f, glm::vec3(1, 0, 0), glm::vec3(1, 0, 0));
-
-        addBox(glm::vec3(0.0f, 0.45f, 0.0f), glm::vec3(0.02f, 0.9f, 0.02f), glm::vec3(0, 1, 0));
-        addCone(glm::vec3(0.0f, 0.9f, 0.0f), 0.04f, 0.1f, glm::vec3(0, 1, 0), glm::vec3(0, 1, 0));
-
-        addBox(glm::vec3(0.0f, 0.0f, 0.45f), glm::vec3(0.02f, 0.02f, 0.9f), glm::vec3(0, 0, 1));
-        addCone(glm::vec3(0.0f, 0.0f, 0.9f), 0.04f, 0.1f, glm::vec3(0, 0, 1), glm::vec3(0, 0, 1));
-
-        addSphere(glm::vec3(0, 0, 0), 0.05f, glm::vec3(0, 0, 0));
-
-        // Ground
-        std::vector<Vertex> groundVertices = {
-            { { -100.0f, 0.0f, -100.0f }, { 0.0f, 1.0f, 0.0f } },
-            {  { 100.0f, 0.0f, -100.0f }, { 0.0f, 1.0f, 0.0f } },
-            {   { 100.0f, 0.0f, 100.0f }, { 0.0f, 1.0f, 0.0f } },
-            { { -100.0f, 0.0f, -100.0f }, { 0.0f, 1.0f, 0.0f } },
-            {   { 100.0f, 0.0f, 100.0f }, { 0.0f, 1.0f, 0.0f } },
-            {  { -100.0f, 0.0f, 100.0f }, { 0.0f, 1.0f, 0.0f } }
-        };
-
-        glBindVertexArray(_vaoGround.Get());
-        glBindBuffer(GL_ARRAY_BUFFER, _vboGround.Get());
-        glBufferData(GL_ARRAY_BUFFER, groundVertices.size() * sizeof(Vertex), groundVertices.data(), GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, Position));
-        glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex, Normal));
-
-        glBindVertexArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        _axisVertexCount = axisVertices.size();
-        glBindVertexArray(_vaoAxis.Get());
-        glBindBuffer(GL_ARRAY_BUFFER, _vboAxis.Get());
-        glBufferData(GL_ARRAY_BUFFER, axisVertices.size() * sizeof(VertexColor), axisVertices.data(), GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexColor), (void *) 0);
-
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexColor), (void *) offsetof(VertexColor, Color));
-
         glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
@@ -427,25 +287,7 @@ namespace VCX::Labs::MotionMatching {
 
         // Render Ground
         glm::mat4 mvp = _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second)) * _camera.GetViewMatrix();
-        _programGround.GetUniforms().SetByName("mvp", mvp);
-        _programGround.GetUniforms().SetByName("matModel", glm::mat4(1.0f));
-        _programGround.GetUniforms().SetByName("matNormal", glm::transpose(glm::inverse(glm::mat4(1.0f))));
-
-        gl_using(_programGround);
-        glBindVertexArray(_vaoGround.Get());
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
-
-        // Render Axis & Dot
-        if (_showAxis) {
-            glDisable(GL_DEPTH_TEST);
-            _programFlat.GetUniforms().SetByName("u_MVP", mvp);
-            gl_using(_programFlat);
-            glBindVertexArray(_vaoAxis.Get());
-            glDrawArrays(GL_TRIANGLES, 0, _axisVertexCount);
-            glBindVertexArray(0);
-            glEnable(GL_DEPTH_TEST);
-        }
+        _sceneEnv.Render(mvp, _showAxis);
 
         glDisable(GL_DEPTH_TEST);
 

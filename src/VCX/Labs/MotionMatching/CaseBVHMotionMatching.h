@@ -11,6 +11,8 @@
 #include "Labs/MotionMatching/Core/Math/array.h"
 #include "Labs/MotionMatching/Core/Math/quat.h"
 #include "Labs/MotionMatching/Core/Math/vec.h"
+#include "Labs/MotionMatching/Utils.hpp"
+#include "SceneEnvironment.hpp"
 #include <future>
 
 namespace VCX::Labs::MotionMatching {
@@ -31,8 +33,7 @@ namespace VCX::Labs::MotionMatching {
 
     private:
         Engine::GL::UniqueProgram     _program;
-        Engine::GL::UniqueProgram     _programFlat;
-        Engine::GL::UniqueProgram     _programGround;
+        SceneEnvironment              _sceneEnv;
         Engine::GL::UniqueRenderFrame _frame;
         Engine::Camera                _camera { .Eye = glm::vec3(-3, 3, 3) };
         Common::OrbitCameraManager    _cameraManager;
@@ -47,14 +48,6 @@ namespace VCX::Labs::MotionMatching {
         Engine::GL::UniqueArrayBuffer        _vboNorm;
         Engine::GL::UniqueArrayBuffer        _vboTex;
         Engine::GL::UniqueElementArrayBuffer _ebo;
-
-        // Axis & Dot
-        Engine::GL::UniqueVertexArray _vaoAxis;
-        Engine::GL::UniqueArrayBuffer _vboAxis;
-        std::size_t                   _axisVertexCount { 0 };
-
-        Engine::GL::UniqueVertexArray _vaoGround;
-        Engine::GL::UniqueArrayBuffer _vboGround;
 
         // BVH Data
         std::unique_ptr<bvh11::BvhObject>                _bvh;
