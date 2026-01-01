@@ -45,6 +45,7 @@ target("assets")
 
 target("engine")
     set_kind("static")
+    add_packages("eigen"         , { public = true })
     add_packages("glad"         , { public = true })
     add_packages("glfw"         , { public = true })
     add_packages("glm"          , { public = true })

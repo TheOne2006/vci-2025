@@ -20,24 +20,30 @@ namespace VCX::Assets {
 
     inline constexpr auto BVHFiles {
         std::to_array<std::string_view>({
-            "assets/bvh/turn_right.bvh",
-            "assets/bvh/walk_forward_resampled.bvh",
-            "assets/bvh/turn_left.bvh",
-            "assets/bvh/spin_counter_clockwise.bvh",
+            "assets/bvh/aiming.bvh",
+            "assets/bvh/dance.bvh",
+            "assets/bvh/fallAndGetUp.bvh",
+            "assets/bvh/fight.bvh",
+            "assets/bvh/ground.bvh",
+            "assets/bvh/multipleActions.bvh",
+            "assets/bvh/obstacles.bvh",
+            "assets/bvh/pushAndStumble.bvh",
+            "assets/bvh/run.bvh",
             "assets/bvh/walk.bvh",
-            "assets/bvh/spin_clockwise.bvh",
-            "assets/bvh/run_forward_resampled.bvh",
         })
     };
 
     enum class ExampleBVH {
-        TurnRight,
-        WalkForwardResampled,
-        TurnLeft,
-        SpinCounterClockwise,
+        Aiming,
+        Dance,
+        FallAndGetUp,
+        Fight,
+        Ground,
+        MultipleActions,
+        Obstacles,
+        PushAndStumble,
+        Run,
         Walk,
-        SpinClockwise,
-        RunForwardResampled,
     };
 
     inline constexpr auto DatabasePath {

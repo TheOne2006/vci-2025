@@ -7,7 +7,8 @@
 
 namespace VCX::Engine {
 
-    template<typename T> struct glm_unpack;
+    template<typename T>
+    struct glm_unpack;
 
     template<typename T>
         requires std::is_arithmetic_v<T>
