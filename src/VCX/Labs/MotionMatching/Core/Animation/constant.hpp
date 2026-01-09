@@ -33,8 +33,8 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
         static float GaitChangeHalflife;
 
         // Inverse Kinematics (IK) parameters
-        static constexpr float IKUnlockRadius = 0.2f;
-        static constexpr float IKFootHeight   = 0.02f;
+        static constexpr float IKUnlockRadius = 0.1f;
+        static constexpr float IKFootHeight   = 0.01f;
         static float           IKBlendingHalflife;
         static constexpr float IKMaxLengthBuffer = 0.015f;
         static constexpr float IKToeLength       = 0.15f;

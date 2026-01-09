@@ -17,3 +17,5 @@ __pycache__
 *.out
 *.synctex.gz
 _minted
+
+*.mov

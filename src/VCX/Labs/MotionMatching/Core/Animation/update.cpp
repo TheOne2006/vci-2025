@@ -211,9 +211,32 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
             desired_velocity);
 
         // Check if we should force a search (e.g. if input changed significantly)
+        // We need static variables to track previous values for change detection
+        static vec3  prev_desired_velocity       = vec3(0, 0, 0);
+        static float prev_desired_rotation_angle = 0.0f;
+
         bool force_search = false;
-        if (length(gamepad_stick_left) > 0.1f || length(gamepad_stick_right) > 0.1f) {
-            // force_search = true; // Maybe too aggressive?
+
+        // Calculate velocity change
+        vec3  desired_velocity_change        = (desired_velocity - prev_desired_velocity) / dt;
+        float desired_velocity_change_length = length(desired_velocity_change);
+
+        // Calculate rotation change
+        // We use the angle of the desired rotation quaternion for simplicity in tracking change
+        float current_angle = 0.0f;
+        vec3  axis;
+        quat_to_angle_axis(desired_rotation, current_angle, axis);
+
+        // Simple heuristic: if velocity changes rapidly, or we start/stop moving
+        if (desired_velocity_change_length > 5.0f) {
+            force_search = true;
+        }
+
+        // Update previous values and manage search timer
+        prev_desired_velocity = desired_velocity;
+
+        if (force_search) {
+            search_timer = 0.0f; // Force search immediately
         }
 
         // Predict Trajectory
@@ -370,6 +393,43 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
         }
 
         // ----------------------------------------------------------------------------
+        // Update Character Root (Apply Animation Delta)
+        // ----------------------------------------------------------------------------
+
+        // 1. 获取当前动画帧在数据库（采集空间）中的根速度和旋转
+        vec3 anim_root_velocity         = db.bone_velocities(current_frame_index)(0);
+        vec3 anim_root_angular_velocity = db.bone_angular_velocities(current_frame_index)(0);
+        quat anim_root_rotation         = db.bone_rotations(current_frame_index)(0);
+
+        // 2. 将速度转换到局部空间 (Local Space)
+        //    即：相对于该帧根骨骼朝向的速度
+        vec3 local_linear_velocity  = quat_inv_mul_vec3(anim_root_rotation, anim_root_velocity);
+        vec3 local_angular_velocity = quat_inv_mul_vec3(anim_root_rotation, anim_root_angular_velocity);
+
+        // 3. 将局部速度应用到当前角色的世界空间方向上
+        //    更新角色的世界线速度
+        character_velocity = quat_mul_vec3(character_rotation, local_linear_velocity);
+
+        // 4. 积分位置
+        character_position = character_position + character_velocity * dt;
+
+        // 5. 积分旋转
+        //    将局部角速度应用到当前旋转上
+        vec3  rotation_axis  = normalize(local_angular_velocity);
+        float rotation_angle = length(local_angular_velocity) * dt;
+
+        if (rotation_angle > 1e-6f) {
+            // 构建局部旋转增量
+            quat rotation_delta = quat_from_angle_axis(rotation_angle, rotation_axis);
+            // 应用旋转 (局部旋转在右侧相乘)
+            character_rotation = quat_mul(character_rotation, rotation_delta);
+            character_rotation = quat_normalize(character_rotation);
+        }
+
+        // 更新角色的世界角速度 (用于后续计算或调试)
+        character_angular_velocity = quat_mul_vec3(character_rotation, local_angular_velocity);
+
+        // ----------------------------------------------------------------------------
         // 3. State Update & Synchronization
         // ----------------------------------------------------------------------------
 
@@ -390,10 +450,11 @@ namespace VCX::Labs::MotionMatching::Core::Animation {
             dt);
 
         // SIMPLE SYNCHRONIZATION (synchronization = 1, direct update)
-        character_position         = simulation_position;
-        character_rotation         = simulation_rotation;
-        character_velocity         = simulation_velocity;
-        character_angular_velocity = simulation_angular_velocity;
+        // Make Simulation follow Character (Root Motion)
+        simulation_position         = character_position;
+        simulation_rotation         = character_rotation;
+        simulation_velocity         = character_velocity;
+        simulation_angular_velocity = character_angular_velocity;
 
         // ----------------------------------------------------------------------------
         // 4. Pose Extraction & Inertialization

@@ -8,6 +8,7 @@ layout(location = 3) in vec4 vertexColor;
 uniform mat4 mvp;
 uniform mat4 matModel;
 uniform mat4 matNormal;
+uniform float height;
 
 out vec3 fragPosition;
 out vec2 fragTexCoord;
@@ -16,10 +17,12 @@ out vec3 fragNormal;
 
 void main()
 {
-    fragPosition = vec3(matModel * vec4(vertexPosition, 1.0f));
+    vec3 pos = vertexPosition;
+    pos.y = height;
+    fragPosition = vec3(matModel * vec4(pos, 1.0f));
     fragTexCoord = vertexTexCoord;
     fragColor = vertexColor;
     fragNormal = normalize(vec3(matNormal * vec4(vertexNormal, 0.0f)));
 
-    gl_Position = mvp * vec4(vertexPosition, 1.0f);
+    gl_Position = mvp * vec4(pos, 1.0f);
 }

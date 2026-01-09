@@ -118,9 +118,6 @@ namespace VCX::Labs::MotionMatching {
 
         // Instance Buffer (loc 2, 3, 4, 5 for mat4)
         glBindBuffer(GL_ARRAY_BUFFER, _vboInstance.Get());
-        // Initial allocation, will be updated every frame
-        // We don't know the size yet, but we can allocate some initial size or just leave it empty for now.
-        // But we need to set up pointers.
 
         std::size_t vec4Size = sizeof(glm::vec4);
         for (int i = 0; i < 4; ++i) {

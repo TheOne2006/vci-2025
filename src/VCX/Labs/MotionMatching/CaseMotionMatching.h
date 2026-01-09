@@ -123,6 +123,12 @@ namespace VCX::Labs::MotionMatching {
         float _uiInputRunningSpeed = 1.3f;
         float _uiInputWalkingSpeed = 1.0f;
 
+        // Adjustment & Clamping
+        float _uiAdjustmentPositionHalflife = 0.1f;
+        float _uiAdjustmentRotationHalflife = 0.2f;
+        float _uiClampingMaxDistance        = 0.15f;
+        float _uiClampingMaxAngle           = 1.57f;
+
         // Parameter ranges
         struct ParamRange {
             float Min;

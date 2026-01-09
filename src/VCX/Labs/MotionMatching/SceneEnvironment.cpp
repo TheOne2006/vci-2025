@@ -65,6 +65,7 @@ namespace VCX::Labs::MotionMatching {
         _programGround.GetUniforms().SetByName("mvp", mvp);
         _programGround.GetUniforms().SetByName("matModel", glm::mat4(1.0f));
         _programGround.GetUniforms().SetByName("matNormal", glm::transpose(glm::inverse(glm::mat4(1.0f))));
+        _programGround.GetUniforms().SetByName("height", GroundHeight);
 
         gl_using(_programGround);
         glBindVertexArray(_vaoGround.Get());

@@ -12,6 +12,9 @@ namespace VCX::Labs::MotionMatching {
     public:
         SceneEnvironment();
 
+        // Exposed parameters
+        float GroundHeight = -0.01f;
+
         void Render(glm::mat4 const & mvp, bool showAxis = true);
 
     private:
