@@ -51,15 +51,15 @@
 \thispagestyle{fancy}
 
 \section{Introduction}
-In the VCL lectures we have learned about some basic animation concepts, which include forward kinematics and inverse kinematics. Howerver, more advanced animation techniques are not covered in the lectures. Therefore, for this final project, I chose to implement several advanced animation techniques from the Animation subtopics, including BVH Motion Player, Skinning, and Motion Matching.
+VCL lectures covered basic animation concepts, including forward kinematics and inverse kinematics. However, advanced animation techniques were outside the scope of the standard curriculum. Therefore, for this final project, I implemented several advanced animation techniques from the Animation subtopics, including specific BVH Motion Player, Skinning, and Motion Matching.
 
-BVH Motion Player is directly application of forward kinematics, which allows us to load and play motion capture data stored in BVH files.
+The BVH Motion Player is a direct application of forward kinematics, allowing the loading and playback of motion capture data stored in BVH files.
 
-Skinning is a technique used to deform a character's mesh based on the underlying skeleton, enabling more realistic character animations. We use linear blend skinning (LBS) to achieve this effect.
+Skinning is a technique used to deform a character's mesh based on the underlying skeleton, enabling more realistic character animations. I used Linear Blend Skinning (LBS) to achieve this effect.
 
-Motion Matching is an advanced animation technique that allows for real-time selection and blending of motion capture data based on the character's current state and desired movement. We build a motion matching system in the base of the BVH Motion Player and Skinning implementations.
+Motion Matching is an advanced animation technique that allows for real-time selection and blending of motion capture data based on the character's current state and desired movement. I built a motion matching system on top of the BVH Motion Player and Skinning implementations.
 
-In this final project, we implemented all selected topics in the Animation subtopics, including BVH Motion Player, Skinning, and Motion Matching, which combined together to form a complete character animation system.
+In this project, I integrated all selected topics—BVH Motion Player, Skinning, and Motion Matching—to form a complete character animation system.
 
 \section{Project Overview}
 The project codebase is organized into a modular structure that separates assets, core logic, and application functionality. The primary directory organization is as follows:
@@ -87,7 +87,7 @@ The project codebase is organized into a modular structure that separates assets
 
 
 \section{Implementation Details}
-To achieve a maintainable and extensible character animation system, we have decoupled the architecture into eight distinct functional components. These components interact to form the complete motion matching pipeline.
+To ensure maintainability and extensibility, I decoupled the architecture into nine distinct functional components. These components interact to form the complete motion matching pipeline.
 
 \begin{enumerate}
     \item \textbf{Animation Bones Operation}: Manages the skeletal hierarchy, forward and inverse kinematics, and local-to-global bone transformations, ensuring correct anatomical structure and movement.
@@ -95,7 +95,7 @@ To achieve a maintainable and extensible character animation system, we have dec
     \item \textbf{GUI}: Provides an interactive visual interface for debugging and real-time parameter tuning using ImGui.
     \item \textbf{Skinning}: Implements Linear Blend Skinning (LBS) to deform the character mesh based on the skeletal poses computed by the animation system.
     \item \textbf{Matching Database}: The core engine responsible for storing motion data, extracting features, and executing efficient nearest-neighbor searches to find the best matching animation frames.
-    \item \textbf{Pose Update}: The central logic hub (`MotionMatchingUpdate`) that orchestrates the frame update. It utilizes the \textbf{Controller} to predict the future trajectory, updates the simulation object's state (with smoothing), performs the database search, and computes the final character pose.
+    \item \textbf{Pose Update}: The central logic hub (`MotionMatchingUpdate') that orchestrates the frame update. It utilizes the \textbf{Controller} to predict the future trajectory, updates the simulation object's state (with smoothing), performs the database search, and computes the final character pose.
     \item \textbf{Controller}: Provides the trajectory prediction logic and computes desired velocities/directions based on input. It is called by the Pose Update component.
     \item \textbf{Whole Processing}: The top-level application cycle (`CaseMotionMatching`). It manages GUI state and input capture, then sequentially executes the Pose Update, Skinning, and Rendering phases for each frame.
     \item \textbf{Utils}: A collection of foundational mathematical libraries and data structures used throughout the system.
@@ -156,52 +156,52 @@ To achieve a maintainable and extensible character animation system, we have dec
     \label{fig:arch_dep}
 \end{figure}
 
-In the following subsections, we will introduce nine functional components by three demonstration cases: BVH Motion Player, Skinned BVH Motion Player, and Motion Matching System.
+The following subsections detail the implementation of these components across the three demonstration cases: BVH Motion Player, Skinned BVH Motion Player, and Motion Matching System.
 
 \subsection{BVH Motion Player}
-This Case uses component 1. Animation Bones Operation, 2. Rendering, 3. GUI, and 9. Utils to load and play BVH motion capture data.
+This case utilizes components 1. Animation Bones Operation, 2. Rendering, 3. GUI, and 9. Utils to load and play BVH motion capture data.
 
-We use a third-party BVH parser to read the BVH files and extract the skeleton hierarchy and motion data, which in \texttt{bvh11.h} and \texttt{bvh11.cpp}.
+I used a third-party BVH parser to read the BVH files and extract the skeleton hierarchy and motion data, located in \texttt{bvh11.h} and \texttt{bvh11.cpp}.
 
-In Bone Operation, we implement \texttt{forward\_kinematics\_full} function to compute the global transformation of each bone based on its local transformation and its parent's global transformation. The update formula is as follows:
+In the Animation Bones Operation component, I implemented the \texttt{forward\_kinematics\_full} function to compute the global transformation of each bone based on its local transformation and its parent's global transformation. The update formula is:
 \[
     G_i = G_{p(i)} \cdot L_i
 \]
-where \(G_i\) is the global transformation of bone \(i\), \(G_{p(i)}\) is the global transformation of its parent bone, and \(L_i\) is the local transformation of bone \(i\). We implement this using an iterative loop rather than recursion. Since the bones are stored in a topological order (where a parent always has a lower index than its child), we can compute global transformations in a single linear pass from index $0$ to $N$.
+where \(G_i\) is the global transformation of bone \(i\), \(G_{p(i)}\) is the global transformation of its parent bone, and \(L_i\) is the local transformation of bone \(i\). I implemented this using an iterative loop rather than recursion. Since the bones are stored in a topological order (where a parent always has a lower index than its child), I can compute global transformations in a single linear pass from index $0$ to $N$.
 
-In character rendering part, we use a simple shader program \texttt{skeleton.vert} and \texttt{skeleton.frag} to visualize the skeleton structure. Specifically, we represent each bone by rendering a transformed cuboid (scaled unit cube). For each bone connecting a joint to its parent, we calculate a model matrix that scales the cube to the bone's length, rotates it to align with the bone's direction, and translates it to the midpoint between the two joints.
+For character rendering, I used a simple shader program \texttt{skeleton.vert} and \texttt{skeleton.frag} to visualize the skeleton structure. Specifically, I represented each bone by rendering a transformed cuboid (scaled unit cube). For each bone connecting a joint to its parent, I calculated a model matrix that scales the cube to the bone's length, rotates it to align with the bone's direction, and translates it to the midpoint between the two joints.
 
-And in environment rendering part, we use another shader program \texttt{checkerboard.vert} and \texttt{checkerboard.frag} to render a ground plane for better visual context during animation playback, and the base plane is textured with a checkerboard pattern. the xyz-axis also rendered in \texttt{SceneEnvironment*} class for better orientation. This render class also used in the following two Cases.
+For environment rendering, I used another shader program \texttt{checkerboard.vert} and \texttt{checkerboard.frag} to render a ground plane for better visual context during animation playback, with the base plane textured with a checkerboard pattern. The XYZ axes are also rendered in the \texttt{SceneEnvironment*} class for better orientation. This rendering class is reused in the subsequent cases.
 
 
 \subsection{Skinned BVH Motion Player}
-This Case based on the BVH Motion Player Case, additionally using component 4. Skinning to apply Linear Blend Skinning (LBS) for realistic character mesh deformation during animation playback.
+This case builds upon the BVH Motion Player, additionally utilizing component 4. Skinning to apply Linear Blend Skinning (LBS) for realistic character mesh deformation during animation playback.
 
-The bone part and scene environmen rendering part are the same as the BVH Motion Player Case.
+The bone operations and scene environment rendering remain consistent with the BVH Motion Player case.
 
-In the skinning part, we implement the Linear Blend Skinning (LBS) algorithm to deform the character mesh. We first load mesh data and bone weights from \texttt{Character.bin}. For each vertex $\mathbf{v}$, its deformed position $\mathbf{v}'$ is calculated as:
+For skinning, I implemented the Linear Blend Skinning (LBS) algorithm to deform the character mesh. I first load mesh data and bone weights from \texttt{Character.bin}. For each vertex $\mathbf{v}$, its deformed position $\mathbf{v}'$ is calculated as:
 \[
     \mathbf{v}' = \sum_{i} w_i \left( \mathbf{q}_i \cdot (\mathbf{q}_{rest, i}^{-1} (\mathbf{v} - \mathbf{t}_{rest, i})) + \mathbf{t}_i \right)
 \]
 where $w_i$ is the weight associated with bone $i$, $(\mathbf{q}_{rest, i}, \mathbf{t}_{rest, i})$ denotes the bind pose transformation, and $(\mathbf{q}_i, \mathbf{t}_i)$ is the animated global transformation.
 
-A \textbf{retargeting} step is required because the character's skeletal structure (from \texttt{Character.bin}) includes a special root bone (Index 0), known as the Simulation Bone, which helps decouple the character's logical position from its animation pose. The BVH motion data, however, starts at the Hips. Therefore, we map the BVH joints to the skinning skeleton starting from Index 1. The global position $\mathbf{P}_{sim}$ of the Simulation Bone is derived by projecting the position of a reference bone (e.g., Spine2) onto the ground plane:
+A \textbf{retargeting} step is required because the character's skeletal structure (from \texttt{Character.bin}) includes a special root bone (Index 0), known as the Simulation Bone, which helps decouple the character's logical position from its animation pose. The BVH motion data, however, starts at the Hips. Therefore, I mapped the BVH joints to the skinning skeleton starting from Index 1. The global position $\mathbf{P}_{sim}$ of the Simulation Bone is derived by projecting the position of a reference bone (e.g., Spine2) onto the ground plane:
 \[
     \mathbf{P}_{sim} = \begin{bmatrix} P_{spine}.x, & 0, & P_{spine}.z \end{bmatrix}^T
 \]
-In the GPU rendering stage, we use a Half-Lambert shading formula in the fragment shader: $I = (\mathbf{N} \cdot \mathbf{L} + 1) / 2$, which preserves details in low-light regions.
+In the GPU rendering stage, I used a Half-Lambert shading formula in the fragment shader: $I = (\mathbf{N} \cdot \mathbf{L} + 1) / 2$, which preserves details in low-light regions.
 
 
 
 \subsection{Motion Matching System}
-This Case builds upon the Skinned BVH Motion Player, incorporating components 5. Matching Database, 6. Pose Update and 7. Controller to implement a real-time motion matching system. It allows for dynamic selection and blending of motion capture data based on user input and character state.
+This case extends the Skinned BVH Motion Player, incorporating components 5. Matching Database, 6. Pose Update and 7. Controller to implement a real-time motion matching system. It allows for dynamic selection and blending of motion capture data based on user input and character state.
 
-The execution flow is orchestrated by the \textbf{Whole Processing} component. In each frame, it first captures user input via the \textbf{GUI}. The core animation logic is then delegated to the \textbf{Pose Update} component, which internally utilizes the \textbf{Controller} for trajectory prediction and the \textbf{Matching Database} for frame selection to determine the optimal character pose. Once the pose is computed, the \textbf{Skinning} component performs mesh deformation, and finally, the \textbf{Rendering} component visualizes the scene.
+The \textbf{Whole Processing} component orchestrates the execution flow. In each frame, it first captures user input via the \textbf{GUI}. The core animation logic is then delegated to the \textbf{Pose Update} component, which internally utilizes the \textbf{Controller} for trajectory prediction and the \textbf{Matching Database} for frame selection to determine the optimal character pose. Once the pose is computed, the \textbf{Skinning} component performs mesh deformation, and finally, the \textbf{Rendering} component visualizes the scene.
 
 \subsubsection{Input Processing and Simulation Object}
-We distinguish between two locomotion modes: \textbf{Walking} and \textbf{Running}, which are controlled by user input (e.g., holding the Shift key). Additionally, a \textbf{Strafing} mode is supported, allowing the character to move laterally while maintaining a fixed facing direction.
+The system distinguishes between two locomotion modes: \textbf{Walking} and \textbf{Running}, which are controlled by user input (e.g., holding the Shift key). Additionally, a \textbf{Strafing} mode is supported, allowing the character to move laterally while maintaining a fixed facing direction.
 
-The user's raw input (WASD keys or gamepad stick) is first processed to handle deadzones and normalization, then transformed into a world-space \textit{desired velocity} that accounts for the camera's orientation. Anisotropic speed limits are applied to allow different maximum speeds for forward, backward, and sideways movement.
+The user's raw input (WASD keys) is first processed to handle deadzones and normalization, then transformed into a world-space \textit{desired velocity} that accounts for the camera's orientation. Anisotropic speed limits are applied to allow different maximum speeds for forward, backward, and sideways movement.
 
 Rather than applying the desired velocity instantaneously, a \textbf{Simulation Object} is used to smooth the character's motion. This object acts as a filter, gradually adjusting the character's position and velocity towards the desired velocity, simulating inertia and producing a smooth, physically plausible trajectory. The predicted future states generated by this system are also used for motion matching.
 
@@ -222,15 +222,15 @@ The core pose update pipeline of the \texttt{MotionMatchingUpdate} function exec
           \end{itemize}
 
     \item \textbf{Database Search}:
-          The constructed query vector is compared against a pre-computed database of motion features. The system performs a nearest-neighbor search to find the frame with the lowest "cost" (Euclidean distance in feature space). If a new frame significantly better than the naturally succeeding frame is found, the system elects to switch to this new animation clip.
+          The constructed query vector is compared against a pre-computed database of motion features. The system performs a nearest-neighbor search to find the frame with the lowest ``cost'' (Euclidean distance in feature space). If a new frame significantly better than the naturally succeeding frame is found, the system elects to switch to this new animation clip.
 
     \item \textbf{Inertialization (Transition Blending)}:
-          When the system switches animation clips, a discontinuity (pop) occurs in the pose. Instead of traditional cross-fading, we use \textbf{Inertialization}. This technique computes the offset (positional and rotational difference) between the source pose and the target pose at the moment of transition. These offsets are then decayed to zero using spring-damper functions. This seamlessly bridges the two animations without the computational cost or "ghosting" artifacts of blending two full skeletons.
+          When the system switches animation clips, a discontinuity (pop) occurs in the pose. Instead of traditional cross-fading, I used \textbf{Inertialization}. This technique computes the offset (positional and rotational difference) between the source pose and the target pose at the moment of transition. These offsets are then decayed to zero using spring-damper functions. This seamlessly bridges the two animations without the computational cost or "ghosting" artifacts of blending two full skeletons.
 
     \item \textbf{Post-Processing with Inverse Kinematics (IK)}:
           Finally, IK is applied to correct foot placement. The motion matching system does not guarantee perfect contact with the ground.
           \begin{itemize}
-              \item \textbf{Foot Locking}: We check the database for ``contact flags'' (indicating if a foot should be planted). If a foot is in contact, we lock its position in world space to prevent "foot sliding" (where the feet slide on the ground while walking).
+              \item \textbf{Foot Locking}: The system checks the database for ``contact flags'' (indicating if a foot should be planted). If a foot is in contact, I lock its position in world space to prevent ``foot sliding'' (where the feet slide on the ground while walking).
               \item \textbf{Two-Bone IK}: The leg joints are then adjusted analytically to satisfy this locked foot position while maintaining the limb lengths.
           \end{itemize}
 \end{enumerate}
@@ -313,10 +313,10 @@ The complete Motion Matching system achieves responsive character control. Figur
     \label{fig:mm_states}
 \end{figure}
 
-Demonstration videos (MOV format) is in the \texttt{result/task*} directories for a complete evaluation.
+Demonstration videos (MOV format) are located in the \texttt{result/task*} directories for a complete evaluation.
 
 \subsection{Discussion on Parameter Tuning}
-The behavior of the Motion Matching system is highly dependent on several key parameters. Based on our analysis and testing, the effects of the most critical parameters are summarized below:
+The behavior of the Motion Matching system is highly dependent on several key parameters. Based on my analysis and testing, the effects of the most critical parameters are summarized below:
 
 \begin{enumerate}
     \item \textbf{Simulation Half-life (Position \& Rotation)}:
