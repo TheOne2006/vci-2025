@@ -12,8 +12,7 @@ namespace VCX::Labs::MotionMatching {
         SimulationObject();
 
         void Render(
-            glm::mat4 const &              view,
-            glm::mat4 const &              proj,
+            glm::mat4 const &              mvp,
             glm::vec3 const &              position,
             glm::quat const &              rotation,
             std::vector<glm::vec3> const & trajectoryPositions,

@@ -19,9 +19,9 @@
 
 namespace VCX::Labs::MotionMatching {
 
-    class CaseBVHMotionMatching : public Common::ICase {
+    class CaseMotionMatching : public Common::ICase {
     public:
-        CaseBVHMotionMatching();
+        CaseMotionMatching();
 
         virtual std::string_view const GetName() override { return "Motion Matching"; }
 

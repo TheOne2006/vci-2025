@@ -21,8 +21,7 @@ namespace VCX::Labs::MotionMatching {
     }
 
     void SimulationObject::Render(
-        glm::mat4 const &              view,
-        glm::mat4 const &              proj,
+        glm::mat4 const &              mvp,
         glm::vec3 const &              position,
         glm::quat const &              rotation,
         std::vector<glm::vec3> const & trajectoryPositions,
@@ -88,7 +87,6 @@ namespace VCX::Labs::MotionMatching {
             glBindBuffer(GL_ARRAY_BUFFER, _vbo.Get());
             glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VertexColor), vertices.data(), GL_DYNAMIC_DRAW);
 
-            glm::mat4 mvp = proj * view; // Identity model matrix
             _program.GetUniforms().SetByName("u_MVP", mvp);
 
             gl_using(_program);

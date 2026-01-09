@@ -1,0 +1,103 @@
+\documentclass[10pt,a4paper]{extarticle}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{color}
+\usepackage{listings}
+\usepackage{lmodern}
+\usepackage{xeCJK}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{minted}
+\usepackage{tikz}
+\usepackage{xcolor}  % 导入 xcolor 包
+\definecolor{AdamWColor}{HTML}{12b5cb}
+\definecolor{SGDColor}{HTML}{e52592}
+\definecolor{CosineColor}{HTML}{425066}
+\definecolor{StepColor}{HTML}{f9ab00}
+\usetikzlibrary{arrows.meta, positioning}
+\setCJKmainfont{Songti SC}
+\setCJKmonofont{PingFang SC}
+\geometry{margin=0.6in}
+\pagestyle{fancy}
+\setlength{\headheight}{14pt}
+\fancyhead[L]{VCL Motion Matching Project Report}
+\fancyhead[R]{王唐欣宇 --- 2400017808}
+\fancyfoot[C]{\thepage}
+\lstset{
+    language=C++,           % 编程语言
+    basicstyle=\ttfamily\small,  % 代码字体
+    keywordstyle=\color{blue},   % 关键字颜色
+    commentstyle=\color{green},  % 注释颜色
+    stringstyle=\color{red},     % 字符串颜色
+    numbers=left,                % 行号显示在左边
+    numberstyle=\tiny,
+    stepnumber=1,
+    breaklines=true,             % 自动换行
+    frame=single                 % 代码框
+}
+
+
+\title{\vspace{-1cm}VCL Motion Matching Project Report}
+\author{王唐欣宇 --- 2400017808}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Introduction}
+In the VCL lectures we have learned about some basic animation concepts, which include forward kinematics and inverse kinematics. Howerver, more advanced animation techniques are not covered in the lectures. Therefore, for this final project, I chose to implement several advanced animation techniques from the Animation subtopics, including BVH Motion Player, Skinning, and Motion Matching.
+
+BVH Motion Player is directly application of forward kinematics, which allows us to load and play motion capture data stored in BVH files.
+
+Skinning is a technique used to deform a character's mesh based on the underlying skeleton, enabling more realistic character animations. We use linear blend skinning (LBS) to achieve this effect.
+
+Motion Matching is an advanced animation technique that allows for real-time selection and blending of motion capture data based on the character's current state and desired movement. We build a motion matching system in the base of the BVH Motion Player and Skinning implementations.
+
+In this final project, we implemented all selected topics in the Animation subtopics, including BVH Motion Player, Skinning, and Motion Matching, which combined together to form a complete character animation system.
+
+\section{Project Overview}
+The project is organized into several functional components, forming a complete pipeline from motion data preparation to real-time animation and rendering:
+
+\begin{itemize}
+    \item \textbf{Assets and Data Resources}: The \texttt{assets} directory contains all data resources used in the project, including:
+          \begin{itemize}
+              \item \texttt{assets/bvh}: BVH files used as motion capture data.
+              \item \texttt{assets/data}: 3D character models and the BVH motion-matching database.
+              \item \texttt{assets/shaders}: Shader files for rendering.
+          \end{itemize}
+
+    \item \textbf{Core Motion Matching System}: The directory \texttt{src/VCX/MotionMatching/Core} implements the core animation and motion matching pipeline, including:
+          \begin{itemize}
+              \item \texttt{Core/Math}: Mathematical utilities and fundamental data structures.
+              \item \texttt{Core/Animation}: Skeleton and bone representations, BVH file parsing, forward and inverse kinematics, and the motion matching search algorithm.
+          \end{itemize}
+
+    \item \textbf{Rendering and Simulation Layer}: The \texttt{SimulationObject*} and \texttt{SceneEnvironment*} modules are responsible for rendering animated characters and managing the scene environment.
+
+    \item \textbf{Demonstration Cases}: The files \texttt{Case*.cpp} provide three representative examples demonstrating the BVH motion player, skinning pipeline, and motion matching functionalities.
+\end{itemize}
+
+
+\section{Implementation Details}
+
+\section{Results and Discussion}
+
+\section{Setting up and Usage}
+The project is built using XMake. To compile the project, simply use the following commands:
+\begin{minted}[frame=single,fontsize=\small]{bash}
+xmake build -v
+\end{minted}
+The executable can be located in the `build' directory, in the subfolder corresponding to your platform.
+To run the project, use:
+\begin{minted}[frame=single,fontsize=\small]{bash}
+xmake run motion-matching
+\end{minted}
+or directly execute the binary from the `build' directory.
+
+\end{document}

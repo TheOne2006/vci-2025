@@ -214,17 +214,13 @@ namespace VCX::Labs::MotionMatching {
     }
 
     void CaseBVHSkinned::OnSetupPropsUI() {
-        const char * bvhNames[] = {
-            "Aiming", "Dance", "FallAndGetUp", "Fight", "Ground", "MultipleActions", "Obstacles", "PushAndStumble", "Run", "Walk"
-        };
-
-        if (ImGui::Combo("BVH File", &_currentBVH, bvhNames, IM_ARRAYSIZE(bvhNames))) {
+        if (ImGui::Combo("BVH File", &_currentBVH, Assets::bvhNames, IM_ARRAYSIZE(Assets::bvhNames))) {
             _bvh = nullptr;
             _joints.clear();
         }
 
         if (_loadFuture.valid()) {
-            ImGui::Text("Loading %s...", bvhNames[_currentBVH]);
+            ImGui::Text("Loading %s...", Assets::bvhNames[_currentBVH]);
             ImGui::SameLine();
         } else {
             if (ImGui::Button("Load")) {

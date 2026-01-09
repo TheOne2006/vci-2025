@@ -33,6 +33,10 @@ namespace VCX::Assets {
         })
     };
 
+    inline constexpr static const char * bvhNames[] = {
+        "Aiming", "Dance", "FallAndGetUp", "Fight", "Ground", "MultipleActions", "Obstacles", "PushAndStumble", "Run", "Walk"
+    };
+
     enum class ExampleBVH {
         Aiming,
         Dance,

@@ -1,16 +1,17 @@
-#include "Labs/MotionMatching/CaseBVHMotionMatching.h"
+#include "Labs/MotionMatching/CaseMotionMatching.h"
 #include "Assets/bundled.h"
 #include "Labs/MotionMatching/Core/Animation/character.hpp"
 #include "Labs/MotionMatching/Core/Animation/constant.hpp"
 #include "Labs/MotionMatching/Core/Animation/controller.hpp"
 #include "Labs/MotionMatching/Core/Animation/database.hpp"
 #include "Labs/MotionMatching/Core/Animation/update.hpp"
+#include <imgui.h>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
 namespace VCX::Labs::MotionMatching {
 
-    CaseBVHMotionMatching::CaseBVHMotionMatching():
+    CaseMotionMatching::CaseMotionMatching():
         _program(
             Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/character.vert"), Engine::GL::SharedShader("assets/shaders/character.frag") })) {
         _cameraManager.AutoRotate = false;
@@ -128,7 +129,7 @@ namespace VCX::Labs::MotionMatching {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
-    void CaseBVHMotionMatching::UpdateController(float dt) {
+    void CaseMotionMatching::UpdateController(float dt) {
         using namespace Core::Math;
         using namespace Core::Animation;
 
@@ -237,7 +238,7 @@ namespace VCX::Labs::MotionMatching {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
-    void CaseBVHMotionMatching::OnSetupPropsUI() {
+    void CaseMotionMatching::OnSetupPropsUI() {
         if (ImGui::Button(_controlCharacter ? "Control: Character" : "Control: Camera")) {
             _controlCharacter = ! _controlCharacter;
         }
@@ -271,7 +272,7 @@ namespace VCX::Labs::MotionMatching {
         ImGui::TextDisabled("Adjust parameters in real-time");
 
         // Half-life parameters
-        if (ImGui::CollapsingHeader("Half-life Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("Half-life Parameters")) {
             ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.6f);
 
             ImGui::Text("Simulation Half-life (position)");
@@ -293,7 +294,7 @@ namespace VCX::Labs::MotionMatching {
         }
 
         // Speed parameters
-        if (ImGui::CollapsingHeader("Speed Parameters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("Speed Parameters")) {
             ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.6f);
 
             ImGui::Text("Running");
@@ -320,13 +321,9 @@ namespace VCX::Labs::MotionMatching {
 
             ImGui::PopItemWidth();
         }
-
-        // Parameters are applied automatically in UpdateController
-        ImGui::Separator();
-        ImGui::TextDisabled("Parameters are applied automatically during update");
     }
 
-    Common::CaseRenderResult CaseBVHMotionMatching::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
+    Common::CaseRenderResult CaseMotionMatching::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
         _frame.Resize(desiredSize, _enableMSAA ? 4 : 1);
 
         _cameraManager.Update(_camera);
@@ -335,7 +332,10 @@ namespace VCX::Labs::MotionMatching {
         float dt = ImGui::GetIO().DeltaTime;
         UpdateController(dt);
 
-        _program.GetUniforms().SetByName("mvp", _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second)) * _camera.GetViewMatrix());
+        glm::mat4 view = _camera.GetViewMatrix();
+        glm::mat4 proj = _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second));
+        glm::mat4 mvp  = proj * view;
+        _program.GetUniforms().SetByName("mvp", mvp);
         _program.GetUniforms().SetByName("matModel", glm::mat4(1.0f));
         _program.GetUniforms().SetByName("matNormal", glm::mat4(1.0f));
         _program.GetUniforms().SetByName("colDiffuse", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -352,15 +352,11 @@ namespace VCX::Labs::MotionMatching {
         glBindVertexArray(0);
 
         // Render Ground
-        glm::mat4 view = _camera.GetViewMatrix();
-        glm::mat4 proj = _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second));
-        glm::mat4 mvp  = proj * view;
         _sceneEnv.Render(mvp, _showAxis);
 
         // Render Simulation Object
         _simulationObject.Render(
-            view,
-            proj,
+            mvp,
             glm::vec3(_position.x, _position.y, _position.z),
             glm::quat(_rotation.w, _rotation.x, _rotation.y, _rotation.z),
             _predictedPositions,
@@ -377,7 +373,7 @@ namespace VCX::Labs::MotionMatching {
         };
     }
 
-    void CaseBVHMotionMatching::OnProcessInput(ImVec2 const & pos) {
+    void CaseMotionMatching::OnProcessInput(ImVec2 const & pos) {
         _cameraManager.EnableKeyboardPan = ! _controlCharacter;
         _cameraManager.ProcessInput(_camera, pos);
     }
