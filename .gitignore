@@ -7,3 +7,15 @@ vsxmake*
 
 docs/html
 docs/latex
+
+.DS_Store
+
+__pycache__
+
+*.aux
+*.log
+*.out
+*.synctex.gz
+_minted
+
+*.mov
