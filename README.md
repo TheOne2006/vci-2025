@@ -1,11 +1,13 @@
 # VCL Motion Matching Project
 
-**Author**: 王唐欣宇 (Wang Tangxinyu)  
+**Author**: Tangxinyu Wang
 **Course**: Visual Computing and Learning (VCL)
 
 ## Introduction
 
-This project implements advanced character animation techniques including a BVH Motion Player, Linear Blend Skinning (LBS), and a complete Motion Matching system. These techniques go beyond standard forward/inverse kinematics to enable realistic, data-driven character animation.
+This is the final project for the **Visual Computing and Learning** course at Peking University, implementing all topics under the **E: Animation** domain. 
+
+This project implements advanced character animation techniques including a **BVH Motion Player**, **Linear Blend Skinning (LBS)**, and a complete **Motion Matching** system. These techniques go beyond standard forward/inverse kinematics to enable realistic, data-driven character animation.
 
 ## Features
 
